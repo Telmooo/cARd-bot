@@ -78,6 +78,47 @@ def print_aruco_params(paramDict):
         if not param.startswith('__'):
             print(f'{param} = {getattr(paramDict, param)}')
 
+def template_matching(frame, template, method=cv2.TM_CCOEFF):
+    w, h = template.shape[::-1]
+
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    res = cv2.matchTemplate(frame_gray, template, method)
+    _min_val, _max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+    if method is cv2.TM_SQDIFF_NORMED or method is cv2.TM_SQDIFF:
+        top_left = min_loc
+    else:
+        top_left = max_loc
+
+    bottom_right = (top_left[0] + w, top_left[1] + h)
+    cv2.rectangle(frame, top_left, bottom_right, 255, 2)
+
+    return frame
+
+def feature_point_detection(frame, method="sift"):
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # if method == 'sift':
+    sift = cv2.SIFT_create()
+    kp_sift, des_sift = sift.detectAndCompute(frame_gray, None)  
+    # elif method == 'brief':
+    star = cv2.xfeatures2d.StarDetector_create()
+    brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+    kp = star.detect(frame_gray,None)
+    kp_brief, des_brief = brief.compute(frame_gray, kp)
+
+    # print(f'Sift kp:{des_sift}') #des:{des_sift.shape} type:{kp_sift.dtype}')
+    # print(f'Brief kp:{des_brief}')# des:{des_brief.shape} type:{kp_brief.dtype}')
+    # print("=======================================")
+    # # elif method == 'orb':
+    # #     orb = cv2.ORB_create(nfeatures=2000)
+    # #     kp, des = orb.detectAndCompute(frame_gray, None)
+
+    # # frame = cv2.drawKeypoints(frame, kp, frame)
+    print(des_brief)
+    return kp_brief, np.float32(des_brief) if des_brief is not None else None
+
 
 if __name__ == "__main__":
 
@@ -85,13 +126,59 @@ if __name__ == "__main__":
 
     arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
     arucoParams = cv2.aruco.DetectorParameters_create()
+    sift = cv2.SIFT_create()
 
-    print_aruco_params(arucoParams)
+    template = cv2.imread('data/simple/1c.jpg')
+    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    template_kp, template_des = sift.detectAndCompute(template_gray, None)  
+
+    h,w = template.shape[:2]
+
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
     while True:
         try:
             frame = camera.read_frame()
 
-            detect_marker(frame, arucoDict, arucoParams)
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            frame_kp, frame_des = sift.detectAndCompute(frame_gray, None)
+
+            if frame_kp is not None and frame_des is not None:
+                FLANN_INDEX_KDTREE = 1
+                index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+                search_params = dict(checks = 50)
+
+                flann = cv2.FlannBasedMatcher(index_params, search_params)
+                matches = flann.knnMatch(template_des, frame_des, k=2)
+
+                good = []
+                for m,n in matches:
+                    if m.distance < 0.7*n.distance:
+                        good.append(m)
+
+                if len(good)>5:
+                    src_pts = np.float32([ template_kp[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+                    dst_pts = np.float32([ frame_kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+                    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+                    matchesMask = mask.ravel().tolist()
+                    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+                    dst = cv2.perspectiveTransform(pts,M)
+                    frame = cv2.polylines(frame,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+                else:
+                    # print( "Not enough matches are found - {}/{}".format(len(good), 5) )
+                    matchesMask = None
+                
+                draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                   singlePointColor = None,
+                   matchesMask = matchesMask, # draw only inliers
+                   flags = 2)
+                frame = cv2.drawMatches(template,template_kp,frame,frame_kp,good,None,**draw_params)
+
+
+            # detect_marker(frame, arucoDict, arucoParams)
+
+            # template_matching(frame, template, cv2.TM_CCOEFF)
             
             cv2.imshow("video", frame)
 
