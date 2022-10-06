@@ -181,15 +181,50 @@ def pre_processing(frame):
     
     approx = [cv2.approxPolyDP(curve, 0.02*cv2.arcLength(curve, True), True) for curve in contours]
     
-    frame = cv2.drawContours(frame, approx, -1, (255, 0,0), 2)
-    
-    return frame
+    filtered_contours = []
+    for contour in approx:
+        if len(contour) == 4:
+            filtered_contours.append(contour)
+
+    # Homography
+    w, h = 500, 726
+    target_pts = np.float32([ [0,0],[w-1,0],[w-1,h-1],[0,h-1] ]).reshape(-1,1,2)
+
+    card = np.zeros_like(frame)
+    for contour in filtered_contours:
+        anchor = contour[0][0]
+        min_dist = np.inf
+        max_dist = -1
+        pair = -1
+        for i, corner in enumerate(contour[1:], start=1):
+            dist = np.sum((anchor - corner[0]) ** 2)
+            if dist < min_dist:
+                pair = i
+                min_dist = dist
+
+        pairs = [(0, pair)]
+        pairs.append(tuple(set([0, 1, 2, 3]) - set(pairs[0])))
+        src_pts = []
+        for pair in pairs:
+            src_pts.append([contour[pair[1]], contour[pair[0]]])
+        src_pts = np.float32(src_pts).reshape(-1, 1, 2)
+
+        M, mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)
+        matchesMask = mask.ravel().tolist()
+
+        card = cv2.warpPerspective(frame, M, (500, 726))
+
+
+        break
+
+
+    return card
     
 
 
 if __name__ == "__main__":
 
-    camera = AndroidCamera("usb", device_no=1, img_size=(960,720))
+    camera = AndroidCamera("usb", device_no=1, img_size=(1280,720))
 
     arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
     arucoParams = cv2.aruco.DetectorParameters_create()
