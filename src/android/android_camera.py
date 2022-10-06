@@ -1,5 +1,5 @@
 from turtle import position
-from typing import Literal, Optional, Tuple
+from typing import Any, Literal, Optional, Tuple
 
 import numpy as np
 import cv2
@@ -8,32 +8,31 @@ import requests
 
 class AndroidCamera:
     mode: str
-    ip: Optional[str]
-    device_no: Optional[int]
+    cpoint: Any
     img_size: Optional[Tuple[int, int]]
     def __init__(
         self,
         mode: Literal["usb", "wifi"],
-        url: Optional[str] = None,
-        device_no: Optional[int] = None,
+        cpoint: Any,
         img_size: Optional[Tuple[int, int]] = None
     ) -> None:
-        assert (mode == "usb" and device_no is not None) or (mode == "wifi" and url is not None), "Must have URL/Device specified for the mode chosen"
-
         self.mode = mode
-        self.url = url
-        self.device_no = device_no
-        self.img_size = tuple([int(size) for size in img_size])
 
-
+        match self.mode:
+            case "usb":
+                self.cpoint = int(cpoint)
+            case "wifi":
+                self.cpoint = str(cpoint)
+                
+        self.img_size = tuple([int(size) for size in img_size]) if img_size else None
         if self.mode == "usb":
             self.__init_device()
 
     def __init_device(self):
-        self.device = cv2.VideoCapture(int(self.device_no))
+        self.device = cv2.VideoCapture(int(self.cpoint))
 
     def __request_frame(self) -> np.ndarray:
-        response = requests.get(self.url)
+        response = requests.get(self.cpoint)
         if response.ok:
             frame = np.array(
                 bytearray(response.content), dtype=np.uint8
