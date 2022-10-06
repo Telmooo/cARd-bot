@@ -45,8 +45,7 @@ class SuecaRound:
             self.cards,
             key=lambda c: SuecaRound.points_by_rank[c.rank] + 100 if c.suit == trump_suit else 0
         )
-        winner = self.cards.index(best_card)
-        return winner % 2
+        return self.cards.index(best_card) % 2
 
     def points(self) -> int:
         return sum(map(lambda c: SuecaRound.points_by_rank.get(c.rank, 0), self.cards))
