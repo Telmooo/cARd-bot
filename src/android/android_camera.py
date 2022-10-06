@@ -119,10 +119,73 @@ def feature_point_detection(frame, method="sift"):
     print(des_brief)
     return kp_brief, np.float32(des_brief) if des_brief is not None else None
 
+def feature_point_detection(frame, template, template_kp, template_des, fp_model=None):
+
+    if fp_model is None:
+        fp_model = cv2.SIFT_create()
+    
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    frame_kp, frame_des = fp_model.detectAndCompute(frame_gray, None)
+
+    if frame_kp is not None and frame_des is not None:
+        FLANN_INDEX_KDTREE = 1
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
+
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
+        matches = flann.knnMatch(template_des, frame_des, k=2)
+
+        good = []
+        for m,n in matches:
+            if m.distance < 0.7*n.distance:
+                good.append(m)
+
+        if len(good)>5:
+            src_pts = np.float32([ template_kp[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+            dst_pts = np.float32([ frame_kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+            matchesMask = mask.ravel().tolist()
+            pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+            dst = cv2.perspectiveTransform(pts,M)
+            frame = cv2.polylines(frame,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+        else:
+            # print( "Not enough matches are found - {}/{}".format(len(good), 5) )
+            matchesMask = None
+        
+        draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+            singlePointColor = None,
+            matchesMask = matchesMask, # draw only inliers
+            flags = 2)
+        frame = cv2.drawMatches(template,template_kp,frame,frame_kp,good,None,**draw_params)
+        
+
+def pre_processing(frame):
+    
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    gray_frame = cv2.GaussianBlur(gray_frame, ksize=(3,3), sigmaX=20, sigmaY=00)
+    
+    clahe = cv2.createCLAHE(clipLimit=3, tileGridSize=(2,2))
+    gray_frame = clahe.apply(gray_frame)
+    
+    edges = cv2.Canny(gray_frame, 100, 200)
+    
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    
+    approx = [cv2.approxPolyDP(curve, 0.02*cv2.arcLength(curve, True), True) for curve in contours]
+    
+    frame = cv2.drawContours(frame, approx, -1, (255, 0,0), 2)
+    
+    
+    return frame
+    
+
 
 if __name__ == "__main__":
 
-    camera = AndroidCamera("usb", device_no=1, img_size=(1280,720))
+    camera = AndroidCamera("usb", device_no=0, img_size=(960,720))
 
     arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
     arucoParams = cv2.aruco.DetectorParameters_create()
@@ -139,48 +202,16 @@ if __name__ == "__main__":
     while True:
         try:
             frame = camera.read_frame()
-
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            frame_kp, frame_des = sift.detectAndCompute(frame_gray, None)
-
-            if frame_kp is not None and frame_des is not None:
-                FLANN_INDEX_KDTREE = 1
-                index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-                search_params = dict(checks = 50)
-
-                flann = cv2.FlannBasedMatcher(index_params, search_params)
-                matches = flann.knnMatch(template_des, frame_des, k=2)
-
-                good = []
-                for m,n in matches:
-                    if m.distance < 0.7*n.distance:
-                        good.append(m)
-
-                if len(good)>5:
-                    src_pts = np.float32([ template_kp[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-                    dst_pts = np.float32([ frame_kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
-                    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
-                    matchesMask = mask.ravel().tolist()
-                    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-                    dst = cv2.perspectiveTransform(pts,M)
-                    frame = cv2.polylines(frame,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-                else:
-                    # print( "Not enough matches are found - {}/{}".format(len(good), 5) )
-                    matchesMask = None
-                
-                draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-                   singlePointColor = None,
-                   matchesMask = matchesMask, # draw only inliers
-                   flags = 2)
-                frame = cv2.drawMatches(template,template_kp,frame,frame_kp,good,None,**draw_params)
-
+            
+            gray_frame = pre_processing(frame)
+            
+            # frame = feature_point_detection(frame, template, template_kp, template_des, fp_model=sift)
 
             # detect_marker(frame, arucoDict, arucoParams)
 
             # template_matching(frame, template, cv2.TM_CCOEFF)
             
-            cv2.imshow("video", frame)
+            cv2.imshow("video", gray_frame)
 
             if (cv2.waitKey(1) == 27):
     
