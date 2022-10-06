@@ -163,23 +163,27 @@ def feature_point_detection(frame, template, template_kp, template_des, fp_model
 def pre_processing(frame):
     
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
     gray_frame = cv2.GaussianBlur(gray_frame, ksize=(3,3), sigmaX=20, sigmaY=00)
-    
     clahe = cv2.createCLAHE(clipLimit=3, tileGridSize=(2,2))
     gray_frame = clahe.apply(gray_frame)
+
     
-    edges = cv2.Canny(gray_frame, 100, 200)
-    
-    contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    
-    approx = [cv2.approxPolyDP(curve, 0.02*cv2.arcLength(curve, True), True) for curve in contours]
-    
-    frame = cv2.drawContours(frame, approx, -1, (255, 0,0), 2)
+    thresh_frame = cv2.adaptiveThreshold(gray_frame, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C , cv2.THRESH_BINARY_INV, 3, 10)
     
     
-    return frame
+    
+    
+    # edges = cv2.Canny(gray_frame, 100, 200)
+    
+    # contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    
+    # approx = [cv2.approxPolyDP(curve, 0.02*cv2.arcLength(curve, True), True) for curve in contours]
+    
+    # frame = cv2.drawContours(frame, approx, -1, (255, 0,0), 2)
+    
+    
+    return thresh_frame
     
 
 
