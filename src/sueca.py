@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import total_ordering
-from typing import List
+from typing import List, Optional
 
 class Rank(Enum):
     Ace = auto()
@@ -51,9 +51,24 @@ class SuecaRound:
         return sum(map(lambda c: SuecaRound.points_by_rank.get(c.rank, 0), self.cards))
 
 class SuecaGame:
+    NUM_ROUNDS = 10
+
     def __init__(self, trump_suit: Suit) -> None:
         self.trump_suit = trump_suit
         self.team_points = [0, 0]
+        self.rounds_evaluated = 0
 
     def evaluate_round(self, r: SuecaRound):
         self.team_points[r.winner(self.trump_suit)] += r.points()
+        self.rounds_evaluated += 1
+
+    def is_finished(self) -> bool:
+        return self.rounds_evaluated == SuecaGame.NUM_ROUNDS
+
+    def is_tied(self) -> bool:
+        return self.team_points[0] == self.team_points[1]
+
+    def winner(self) -> Optional[int]:
+        if not self.finished() or self.is_tied():
+            return None
+        return self.team_points.index(max(self.team_points))
