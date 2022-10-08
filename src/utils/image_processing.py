@@ -67,18 +67,18 @@ def extract_contours(binary_image, params):
 def get_quadrilateral_ord_corners(contour):
     anchor_point = contour[0][0] # Top left
     # Find closest corner
-    min_distance, closest = np.inf, -1
+    min_distance, max_distance, closest, farthest = np.inf, 0, -1, -1
     for idx, corner in enumerate(contour[1:], start=1):
         distance = np.sum((corner[0] - anchor_point) ** 2)
         if distance < min_distance:
             min_distance = distance
             closest = idx
+        if distance > max_distance:
+            max_distance = distance
+            farthest = idx 
 
     # Create the pairs
-    pairs = [(0, closest)]
-    pairs.append(tuple(
-        set(range(4)) - set(pairs[0])
-    ))
+    pairs = [(0, closest), (farthest, 6 - closest - farthest)]
     out_pts = np.float32([
         [contour[pair[1]], contour[pair[0]]]
             for pair in pairs
@@ -145,8 +145,14 @@ def extract_cards(image, contours, params):
     ]).reshape(-1, 1, 2)
 
     cards = []
+    debug_img = np.zeros_like(image)
+    COLOURS = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]
     for contour in filtered_contours:
         src_pts = get_quadrilateral_ord_corners(contour)
+
+        for idx, corner in enumerate(src_pts):
+            cv2.circle(debug_img, np.int32(corner[0]), 5, COLOURS[idx], 2)
+
 
         # M = cv2.perspectiveTransform(src_pts, target_pts)
         M, _mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)
@@ -154,6 +160,7 @@ def extract_cards(image, contours, params):
         
         cards.append(card)
 
+    cv2.imshow("Corner Order", debug_img)
     return cards
 
 def extract_card_corners(cards, params):
@@ -165,3 +172,23 @@ def extract_card_corners(cards, params):
     ]
 
     return card_corners
+
+def template_matching(frame, template, method=cv2.TM_CCOEFF_NORMED):
+    w, h = template.shape[::-1]
+
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    res = cv2.matchTemplate(frame_gray, template, method)
+    _min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+    if method is cv2.TM_SQDIFF_NORMED or method is cv2.TM_SQDIFF:
+        top_left = min_loc
+    else:
+        top_left = max_loc
+
+    match = frame[
+        top_left[1]:top_left[1] + w,
+        top_left[0]:top_left[0] + h
+    ]
+
+    return frame, max_val

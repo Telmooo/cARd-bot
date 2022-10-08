@@ -69,24 +69,6 @@ def print_aruco_params(paramDict):
         if not param.startswith('__'):
             print(f'{param} = {getattr(paramDict, param)}')
 
-def template_matching(frame, template, method=cv2.TM_CCOEFF):
-    w, h = template.shape[::-1]
-
-    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    res = cv2.matchTemplate(frame_gray, template, method)
-    _min_val, _max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-
-    if method is cv2.TM_SQDIFF_NORMED or method is cv2.TM_SQDIFF:
-        top_left = min_loc
-    else:
-        top_left = max_loc
-
-    bottom_right = (top_left[0] + w, top_left[1] + h)
-    cv2.rectangle(frame, top_left, bottom_right, 255, 2)
-
-    return frame
-
 # def feature_point_detection(frame, method="sift"):
 #     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
