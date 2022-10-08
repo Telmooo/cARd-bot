@@ -61,14 +61,6 @@ class AndroidCamera:
         
         return frame
 
-
-def detect_marker(frame, arucoDict, arucoParams):
-    (corners, _ids, _rejected) = cv2.aruco.detectMarkers(frame, arucoDict, parameters=arucoParams)
-
-    if len(corners) > 0:    
-        for (x,y) in corners[0][0]:
-            cv2.drawMarker(frame, (int(x), int(y)), color=(0,255,0), markerType=cv2.MARKER_TILTED_CROSS, thickness=2)
-
 def print_aruco_params(paramDict):
     '''
     https://docs.opencv.org/3.4/d1/dcd/structcv_1_1aruco_1_1DetectorParameters.html#acf6a0da0ae6bcd582c51ae14263df87a
