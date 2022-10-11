@@ -3,11 +3,15 @@ import cv2
 import numpy as np
 
 from android.android_camera import AndroidCamera
+import config
 from config import parse_config
 from utils.draw import draw_grid
 from utils.image_processing import binarize, contour_filter, enhance_image, extract_card_corners, extract_cards, extract_contours, template_matching
 
 def run(params) -> None:
+
+    if params["debug"]:
+        config.DEBUG_MODE = True
 
     camera = AndroidCamera(
         mode=params["mode"], cpoint=args["cpoint"]
@@ -77,6 +81,11 @@ def parse_args():
         type=str, help="path to config.yaml",
         default="./config.yaml",
         required=True
+    )
+    parser.add_argument(
+        "--debug",
+        type=bool, action="store_true", default=False,
+        help="enable debug mode"
     )
 
     args = parser.parse_args()
