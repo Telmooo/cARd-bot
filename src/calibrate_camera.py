@@ -83,20 +83,24 @@ def run(
                 exit(0)
 
     result = calibrate_camera(saved_frames, chess_shape, chess_mm)
+    
 
     if result is None:
         print("Calibration failed!")
     else:
         print("Calibration was successful! Saving results...")
 
-        os.makedirs(save_dir)
+        os.makedirs(save_dir, exist_ok=True)
 
         if save_frames:
             for i, frame in enumerate(saved_frames):
-                cv2.imwrite(os.path.join(save_dir, f"frame{i}.png"), frame)
+                cv2.imwrite(os.path.join(save_dir, f"frame{i}.png"), frame,)
 
         camera_matrix = result[0]
+        camera_dist_coeffs = result[1]
+    
         camera_matrix.dump(os.path.join(save_dir, "camera_matrix.numpy"))
+        camera_dist_coeffs.dump(os.path.join(save_dir, "camera_dist_coeffs.numpy"))
 
 
 def parse_args():

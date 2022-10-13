@@ -5,6 +5,7 @@ import numpy as np
 from android.android_camera import AndroidCamera
 import config
 from config import parse_config
+from opengl.render import AR_Render
 from utils.draw import draw_grid
 from utils.image_processing import binarize, contour_filter, enhance_image, extract_card_corners, extract_cards, extract_contours, template_matching
 
@@ -16,11 +17,12 @@ def run(params) -> None:
     camera = AndroidCamera(
         mode=params["mode"], cpoint=args["cpoint"]
     )
+    
+    ar_renderer = AR_Render(camera, './src/opengl/models/Box/box.obj', 0.02)
 
     template = cv2.imread("./data/cards_normal/31.png")
     template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     template = enhance_image(template, params["config"])
-    # template = template[0:190, 0:100]
 
     while True:
         try:
@@ -50,6 +52,8 @@ def run(params) -> None:
             cv2.drawContours(og_frame, filtered_contours, -1 ,(0, 0, 255), 2)
 
             cv2.imshow("Frame", og_frame)
+            
+            ar_renderer.set_frame(og_frame)
 
             if cards:
                 cv2.imshow("Cards", draw_grid(cards, resize=(1280, 720)))
@@ -84,7 +88,7 @@ def parse_args():
     )
     parser.add_argument(
         "--debug",
-        type=bool, action="store_true", default=False,
+        action="store_true", default=True,
         help="enable debug mode"
     )
 

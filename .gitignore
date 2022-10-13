@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 data/
+
+camera_dist_coeffs.numpy
+camera_matrix.numpy

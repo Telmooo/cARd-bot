@@ -35,75 +35,20 @@ class Filter:
 
 class AR_Render:
     
-    def __init__(self, camera : AndroidCamera, obj_path, obj_scale=0.02):
-        
-        # TEMP
-        cam_matrix = np.array([
-            [544.91, 0.00, 316.75],
-            [0.00, 606.31, 261.07],
-            [0.00, 0.00, 1.00],
-        ])
+    def __init__(self, camera : AndroidCamera, obj_path : str, obj_scale=0.02) -> None:
 
-        dist_coeff = np.array([0.49921041, -2.2731793, -0.01392174, 0.01677649, 3.99742617]) 
-
-        self.camera_matrix = cam_matrix
-        self.distort_coef = dist_coeff
-        
+        self.camera_matrix = np.load("camera_matrix.numpy", allow_pickle=True)
+        self.dist_coeffs = np.load("camera_dist_coeffs.numpy", allow_pickle=True)
+            
         self.device = camera.device
-        # self.camera_matrix = camera.matrix
-        # self.distort_coef = camera.distort_coeffs
-
-        self.cam_w, self.cam_h = map(int, (camera.device.get(3), camera.device.get(4)))        
-        self.obj_file = Path(obj_path)
-        
-        
-        if not self.obj_file.exists():
-            raise FileNotFoundError(self.obj_file)
-        
+        self.cam_w, self.cam_h = map(int, (camera.device.get(3), camera.device.get(4)))  
+        self.initOpengl(self.cam_w, self.cam_h)  
         self.model_scale = obj_scale
         
-        self.projectMatrix = intrinsic2Project(self.camera_matrix, self.cam_w, self.cam_h, 0.01, 100.0)
+        self.projectMatrix = intrinsic2Project(self.camera_matrix, self.cam_w, self.cam_h, 0.01, 100.0)      
+        self.obj_file = Path(obj_path)        
         self.loadModel(obj_path)
-        
-        # Model translate that you can adjust by key board 'w', 's', 'a', 'd'
-        self.translate_x, self.translate_y, self.translate_z = 0, 0, 0
-        self.pre_extrinsicMatrix = None
-        
-        self.filter = Filter()
-        
-        self.initOpengl(self.cam_w, self.cam_h)
-        
     
-    def __init__(self, camera : AndroidCamera, object_path, model_scale = 0.02):
-        
-        """[Initialize]
-        
-        Arguments:
-            camera_matrix {[np.array]} -- [your camera intrinsic matrix]
-            dist_coefs {[np.array]} -- [your camera difference parameters]
-            object_path {[string]} -- [your model path]
-            model_scale {[float]} -- [your model scale size]
-        """
-        # Initialise webcam and start thread
-        self.webcam = camera.device
-        
-        self.image = None
-        self.image_w, self.image_h = map(int, (self.webcam.get(3), self.webcam.get(4)))
-        self.initOpengl(self.image_w, self.image_h)
-        self.model_scale = model_scale
-    
-        # TEMP
-        self.cam_matrix = np.array([
-         [544.91, 0.00, 316.75],
-         [0.00, 606.31, 261.07],
-         [0.00, 0.00, 1.00],
-        ])
-        self.dist_coefs = np.array([0.49921041, -2.2731793, -0.01392174, 0.01677649, 3.99742617])
-
-        # self.cam_matrix,self.dist_coefs = camera_matrix, dist_coefs # TODO fetch data from camera obj
-        self.projectMatrix = intrinsic2Project(self.cam_matrix, self.image_w, self.image_h, 0.01, 100.0)
-        self.loadModel(object_path)
-        
         # Model translate that you can adjust by key board 'w', 's', 'a', 'd'
         self.translate_x, self.translate_y, self.translate_z = 0, 0, 0
         self.pre_extrinsicMatrix = None
@@ -231,11 +176,11 @@ class AR_Render:
         rvecs, tvecs, model_matrix = None, None, None
         
         if ids is not None and corners is not None:
-            rvecs, tvecs, _= aruco.estimatePoseSingleMarkers(corners, mark_size , self.cam_matrix, self.dist_coefs)
+            rvecs, tvecs, _= aruco.estimatePoseSingleMarkers(corners, mark_size , self.camera_matrix, self.dist_coeffs)
             new_rvecs = rvecs[0,:,:]
             new_tvecs = tvecs[0,:,:]
             
-            projectMatrix = intrinsic2Project(self.cam_matrix, width, height, 0.01, 100.0)
+            projectMatrix = intrinsic2Project(self.camera_matrix, width, height, 0.01, 100.0)
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
             glMultMatrixf(projectMatrix)
@@ -261,26 +206,9 @@ class AR_Render:
                 glCallList(self.model.gl_list)
                 
             cv2.waitKey(20)
-             
-        
-    # def run(self):
-    #     # Begin to render
-        
-    #     glutPostRedisplay()
-    #     # glutMainLoop()
-    #     glutMainLoopEvent()
-  
+    
+    def set_frame(self, frame):
+        self.image = frame
 
-# if __name__ == "__main__":
-#     # The value of cam_matrix and dist_coeff from your calibration by using chessboard.
-#     cam_matrix = np.array([
-#          [544.91, 0.00, 316.75],
-#          [0.00, 606.31, 261.07],
-#          [0.00, 0.00, 1.00],
-#     ])
-
-#     # dist_coeff = np.array([0.49921041, -2.2731793, -0.01392174, 0.01677649, 3.99742617])    
-#     dist_coeff = np.array([0,0,0,0,0])
-#     # dist_coeff = np.array([ 2.84542709e-01,-1.92052859e+00,1.35772811e-05,-7.62765800e-04,4.00245238e+00]) 
-#     ar_instance = AR_render(cam_matrix, dist_coeff, './Models/Monster/Sinbad_4_000001.obj', model_scale = 0.02)
-    # ar_instance.run() 
+        glutPostRedisplay()  
+        glutMainLoopEvent()
