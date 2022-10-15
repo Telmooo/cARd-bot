@@ -1,5 +1,4 @@
 
-from android.android_camera import AndroidCamera
 from typing import Any, List, Optional, Tuple
 
 import argparse
@@ -7,6 +6,7 @@ import cv2
 import numpy as np
 import os
 
+from android.android_camera import AndroidCamera
 
 def calibrate_camera(
     images: List[np.ndarray],
@@ -56,11 +56,13 @@ def run(
     chess_mm: float,
     save_dir: str,
     save_frames: bool = False,
+    debug: bool = False
 ) -> None:
 
     camera = AndroidCamera(mode=mode, cpoint=cpoint)
 
     saved_frames: List[np.ndarray] = []
+    os.makedirs(save_dir, exist_ok=True)
 
     print(
         "Starting calibration process...\n"
@@ -75,6 +77,8 @@ def run(
             case 99: # C
                 saved_frames.append(frame.copy())
                 print(f"Captured frames [{len(saved_frames)} / 10]\r")
+                if save_frames:
+                    cv2.imwrite(os.path.join(save_dir, f"frame{len(saved_frames)}.png"), frame)
             case 13:  # ENTER
                 print("\nFinished capturing. Beginning calibration...")
                 break
@@ -82,18 +86,17 @@ def run(
                 print("\nAborting...")
                 exit(0)
 
-    result = calibrate_camera(saved_frames, chess_shape, chess_mm)
+    result = calibrate_camera(
+        saved_frames,
+        chess_shape,
+        chess_mm,
+        show_results=debug
+    )
 
     if result is None:
         print("Calibration failed!")
     else:
         print("Calibration was successful! Saving results...")
-
-        os.makedirs(save_dir)
-
-        if save_frames:
-            for i, frame in enumerate(saved_frames):
-                cv2.imwrite(os.path.join(save_dir, f"frame{i}.png"), frame)
 
         camera_matrix = result[0]
         camera_matrix.dump(os.path.join(save_dir, "camera_matrix.numpy"))
@@ -126,6 +129,11 @@ def parse_args():
         type=str, default="./camera",
         help="directory to save callibration acquired and captured frames"
     )
+    parser.add_argument(
+        "--debug",
+        type=bool, action="store_true", default=False,
+        help="enable debug mode"
+    )
 
     args = parser.parse_args()
     return vars(args)
@@ -140,4 +148,4 @@ if __name__ == "__main__":
     args["chess_shape"] = args["chess_shape"][:2][::-1]
 
     run(args["mode"], args["cpoint"], args["chess_shape"], args["chess_mm"],
-            args["save_dir"], args["save_frames"])
+            args["save_dir"], args["save_frames"], args["debug"])

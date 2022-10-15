@@ -1,12 +1,17 @@
-
-from distutils.log import debug
-from time import sleep
-from typing import Any, Dict
+from typing import Any, Dict, Union
+from nptyping import Float32, NDArray, Shape, UInt8
 
 import numpy as np
 import cv2
 from skimage import filters
 
+Grayscale8UImageType = NDArray[Shape["N, M"], UInt8]
+Grayscale32FImageType = NDArray[Shape["N, M"], Float32]
+Colour8UImageType = NDArray[Shape["N, M, 3"], UInt8]
+Colour32FUImageType = NDArray[Shape["N, M, 3"], Float32]
+
+GrayscaleImageType = Union[Grayscale8UImageType, Grayscale32FImageType]
+ColourImageType = Union[Colour8UImageType, Colour32FUImageType]
 
 def detect_marker(image, arucoDict, arucoParams):
     marker_image = image.copy()
@@ -27,7 +32,7 @@ def print_aruco_params(paramDict):
             print(f'{param} = {getattr(paramDict, param)}')
 
         
-def enhance_image(gray_image: np.ndarray, params: Dict[str, Any]):
+def enhance_image(gray_image: Grayscale8UImageType, params: Dict[str, Any]):
     enhanced_image = cv2.GaussianBlur(
         gray_image,
         ksize=(params["gaussianBlur.kernelSize"], params["gaussianBlur.kernelSize"]),
@@ -43,7 +48,7 @@ def enhance_image(gray_image: np.ndarray, params: Dict[str, Any]):
 
     return enhanced_image
 
-def binarize(gray_image, params):
+def binarize(gray_image: Grayscale8UImageType, params: Dict[str, Any]):
     thresholded_image = filters.apply_hysteresis_threshold(
         gray_image,
         low=params["hysteresis.lowerThresh"],
@@ -54,7 +59,7 @@ def binarize(gray_image, params):
 
     return thresholded_image
 
-def extract_contours(binary_image, params):
+def extract_contours(binary_image: Grayscale8UImageType, params: Dict[str, Any]):
     contours, _hierarchy = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     contours = [
@@ -79,10 +84,21 @@ def get_quadrilateral_ord_corners(contour):
 
     # Create the pairs
     pairs = [(0, closest), (farthest, 6 - closest - farthest)]
-    out_pts = np.float32([
+    
+    out_pts = [
         [contour[pair[1]], contour[pair[0]]]
             for pair in pairs
-    ]).reshape(-1, 1, 2)
+    ]
+
+    slope_12 = calc_slope(out_pts[0][0], out_pts[0][1])
+    slope_43 = calc_slope(out_pts[1][1], out_pts[1][0])
+
+
+
+    # out_pts = np.float32([
+    #     [contour[pair[1]], contour[pair[0]]]
+    #         for pair in pairs
+    # ]).reshape(-1, 1, 2)
 
     return out_pts
 
@@ -173,7 +189,11 @@ def extract_card_corners(cards, params):
 
     return card_corners
 
-def template_matching(frame, template, method=cv2.TM_CCOEFF_NORMED):
+def template_matching(
+    frame: Union[GrayscaleImageType, ColourImageType],
+    template: Union[GrayscaleImageType, ColourImageType],
+    method: int = cv2.TM_CCOEFF_NORMED
+):
     w, h = template.shape[::-1]
 
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

@@ -1,6 +1,5 @@
 import argparse
 import cv2
-import numpy as np
 
 from android.android_camera import AndroidCamera
 import config
@@ -17,21 +16,16 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
 
-    template = cv2.imread("./data/cards_normal/31.png")
-    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    template = enhance_image(template, params["config"])
-    # template = template[0:190, 0:100]
-
     while True:
         try:
             og_frame = camera.read_frame()
-
             frame = cv2.cvtColor(og_frame, cv2.COLOR_BGR2GRAY)
             frame = enhance_image(frame, params["config"])
 
             thresh_frame = binarize(frame, params["config"])
 
-            cv2.imshow("Binarized Image", thresh_frame)
+            if config.DEBUG_MODE:
+                cv2.imshow("Binarized Image", thresh_frame)
 
             contours = extract_contours(thresh_frame, params["config"])
 
@@ -39,17 +33,14 @@ def run(params) -> None:
 
             card_corners = extract_card_corners(cards, params["config"])
 
-            for card_corner in card_corners:
-                match, val = template_matching(card_corner, template)
-                if val > 0.8:
-                    cv2.putText(card_corner, "VALID", (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 1, cv2.LINE_AA)
-                else:
-                    cv2.putText(card_corner, f"INVALID={val}", (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
+            if config.DEBUG_MODE:
+                debug_frame = og_frame.copy()
+                filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
+                cv2.drawContours(debug_frame, filtered_contours, -1 ,(0, 0, 255), 2)
 
-            filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
-            cv2.drawContours(og_frame, filtered_contours, -1 ,(0, 0, 255), 2)
-
-            cv2.imshow("Frame", og_frame)
+                cv2.imshow("Contours Frame", debug_frame)
+            
+            cv2.imshow("Camera Frame", og_frame)
 
             if cards:
                 cv2.imshow("Cards", draw_grid(cards, resize=(1280, 720)))
@@ -84,7 +75,7 @@ def parse_args():
     )
     parser.add_argument(
         "--debug",
-        type=bool, action="store_true", default=False,
+        action="store_true", default=False,
         help="enable debug mode"
     )
 

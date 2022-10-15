@@ -1,7 +1,6 @@
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from functools import total_ordering
 from typing import List, Optional
 
 class Rank(Enum):

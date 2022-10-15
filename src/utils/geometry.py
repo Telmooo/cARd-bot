@@ -1,21 +1,32 @@
-from typing import List, Tuple, Union
+from typing import Tuple, Union
+from nptyping import NDArray, Shape, Float
 
 import numpy as np
 
-Point2DType = Union[Tuple[float, float], List[float, float], np.ndarray]
-Vector2DType = Union[Tuple[Point2DType, Point2DType], List[Point2DType, Point2DType], np.ndarray]
+VectorType = Union[Tuple[float, float], NDArray[Shape["2", Float]]]
+Vector2DType = Union[Tuple[VectorType, VectorType], NDArray[Shape["2, 2"], Float]]
 
 def line_slope(
-    point_1: Point2DType,
-    point_2: Point2DType,
+    point_1: VectorType,
+    point_2: VectorType,
     eps: float = 1e-6
 ) -> float:
+    """Calculates the slope of the line defined by the two points.
+
+    Args:
+        point_1 (VectorType): Point of the line.
+        point_2 (VectorType): Other point of the line
+        eps (float): Constant to prevent division by 0. Defaults to 1e-6.
+
+    Returns:
+        float: Value of the line slope.
+    """
     return (point_1[0] - point_2[0]) / (point_1[1] - point_2[1] + eps)
 
 def line_intersection(
-    line_1: Tuple[Point2DType, Point2DType],
-    line_2: Tuple[Point2DType, Point2DType]
-) -> Point2DType:
+    line_1: Vector2DType,
+    line_2: Vector2DType
+):
     """Calculates the intersection point of two lines.
 
     Having two lines:
@@ -33,8 +44,8 @@ def line_intersection(
     R lies on L1, since R.L1 = (L1xL2).L1 = 0, and likewise for L2. Therefore, R must be the intersection point of the two lines.
 
     Args:
-        line_1 (Tuple[Point2DType, Point2DType]): Representation of the first line via two points of that line.
-        line_2 (Tuple[Point2DType, Point2DType]): Representation of the second line via two points of that line.
+        line_1 (Vector2DType): Representation of the first line via two points of that line.
+        line_2 (Vector2DType): Representation of the second line via two points of that line.
 
     Returns:
         Point2DType: The intersection point of the two lines, if it exists. Returns (inf, inf) if lines don't intersect.
@@ -50,4 +61,3 @@ def line_intersection(
         return np.array([np.inf, np.inf])
 
     return np.array([x / z, y / z])
-
