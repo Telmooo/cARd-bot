@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Tuple, Union
 from nptyping import NDArray, Shape, Float
 
@@ -5,6 +6,12 @@ import numpy as np
 
 VectorType = Union[Tuple[float, float], NDArray[Shape["2", Float]]]
 Vector2DType = Union[Tuple[VectorType, VectorType], NDArray[Shape["2, 2"], Float]]
+
+class Quadrants(Enum):
+    FIRST = 1
+    SECOND = 2
+    THIRD = 3
+    FOURTH = 4
 
 def line_slope(
     point_1: VectorType,
@@ -26,7 +33,7 @@ def line_slope(
 def line_intersection(
     line_1: Vector2DType,
     line_2: Vector2DType
-):
+) -> VectorType:
     """Calculates the intersection point of two lines.
 
     Having two lines:
@@ -61,3 +68,27 @@ def line_intersection(
         return np.array([np.inf, np.inf])
 
     return np.array([x / z, y / z])
+
+def angle_quadrant(angle: float) -> Quadrants:
+    """Get quadrant number of the given angle.
+
+    Angles at the boundary of each quadrant returns the following:
+    - `0` = FIRST
+    - `π/2` = SECOND
+    - `-π` = THIRD
+    - `-π/2` = FOURTH
+
+    Args:
+        angle (float): Angle defined between [-π, π].
+
+    Returns:
+        Quadrants: Number of quadrant.
+    """
+    if angle >= np.pi / 2:
+        return Quadrants.SECOND
+    if angle >= 0:
+        return Quadrants.FIRST
+    if angle >= -np.pi / 2:
+        return Quadrants.FOURTH
+    
+    return Quadrants.THIRD
