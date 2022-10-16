@@ -65,7 +65,6 @@ class AR_Render:
             object_path {[string]} -- [path of model]
         """
         
-        print(object_path)
         self.model = OBJ(object_path, swapyz = True)
 
   
@@ -91,6 +90,7 @@ class AR_Render:
         self.window_id = glutCreateWindow(window_name)
         glutDisplayFunc(self.draw_scene)
         glutIdleFunc(self.draw_scene)
+        glutKeyboardFunc(self.keyboard_listener)
         
         glClearColor(0.0, 0.0, 0.0, 0.0)
         glClearDepth(1.0)
@@ -224,6 +224,13 @@ class AR_Render:
         glutPostRedisplay()  
         glutMainLoopEvent()
         # glutIdleFunc()
+
+    def keyboard_listener(self, key, x, y):
+        if key == b'\x1b':
+            glutDestroyWindow(self.window_id)
+            glutMainLoopEvent()
+            exit(0)
+
                 
     def run(self):
         glutMainLoop()

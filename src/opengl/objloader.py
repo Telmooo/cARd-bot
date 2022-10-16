@@ -41,9 +41,7 @@ class OBJ:
     def __init__(self, filename, swapyz=False):
         
         self.dir = filename[: filename.rfind('/') + 1]   
-        
-        print(self.dir)     
-        
+                
         """Loads a Wavefront OBJ file. """
         self.vertices = []
         self.normals = []
@@ -69,7 +67,6 @@ class OBJ:
                 self.texcoords.append(list(map(float, values[1:3])))
             elif values[0] in ('usemtl', 'usemat'):
                 material = values[1]
-                # print('debug values', values[1])
             elif values[0] == 'mtllib':
                 self.mtl = MTL(self.dir, values[1])
             elif values[0] == 'f':
