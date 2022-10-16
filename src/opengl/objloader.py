@@ -40,7 +40,9 @@ def MTL(dir, filename):
 class OBJ:
     def __init__(self, filename, swapyz=False):
         
-        self.dir = filename[: filename.rfind('/') + 1]        
+        self.dir = filename[: filename.rfind('/') + 1]   
+        
+        print(self.dir)     
         
         """Loads a Wavefront OBJ file. """
         self.vertices = []

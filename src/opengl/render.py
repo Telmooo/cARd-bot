@@ -54,6 +54,7 @@ class AR_Render:
         self.pre_extrinsicMatrix = None
         
         self.filter = Filter()
+        self.image = None
         
 
     def loadModel(self, object_path):
@@ -63,6 +64,8 @@ class AR_Render:
         Arguments:
             object_path {[string]} -- [path of model]
         """
+        
+        print(object_path)
         self.model = OBJ(object_path, swapyz = True)
 
   
@@ -212,3 +215,7 @@ class AR_Render:
 
         glutPostRedisplay()  
         glutMainLoopEvent()
+        # glutIdleFunc()
+                
+    def run(self):
+        glutMainLoop()

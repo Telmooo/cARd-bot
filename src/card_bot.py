@@ -18,7 +18,9 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
     
-    ar_renderer = AR_Render(camera, './src/opengl/models/Box/box.obj', 0.02)
+    ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.05)
+    # ar_renderer = AR_Render(camera, './src/opengl/models/Box/box.obj', 0.02)
+    
 
     template = cv2.imread("./data/cards_normal/31.png")
     template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
@@ -49,7 +51,7 @@ def run(params) -> None:
                     cv2.putText(card_corner, f"INVALID={val}", (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
 
             filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
-            cv2.drawContours(og_frame, filtered_contours, -1 ,(0, 0, 255), 2)
+            # cv2.drawContours(og_frame, filtered_contours, -1 ,(0, 0, 255), 2)
 
             cv2.imshow("Frame", og_frame)
             
