@@ -19,7 +19,7 @@ def run(params) -> None:
     )
     
     ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.05)
-    # ar_renderer = AR_Render(camera, './src/opengl/models/Box/box.obj', 0.02)
+    # ar_renderer = AR_Render(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
     
 
     template = cv2.imread("./data/cards_normal/31.png")

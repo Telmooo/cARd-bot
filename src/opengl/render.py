@@ -100,18 +100,18 @@ class AR_Render:
         
         # # Assign texture
         glEnable(GL_TEXTURE_2D)
-    
         
-        # Set ambient lighting
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.5,0.5,0.5,1)) 
+        # setup lighting
+        glLight(GL_LIGHT0, GL_POSITION,  (2, 0, 2, 1))
+        glLightfv(GL_LIGHT0, GL_AMBIENT, (0, 0, 0, 0.1))
+        glLightfv(GL_LIGHT0, GL_SPECULAR, (0.2, 0.2, 0.2, 0.5))
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.2,0.2,0.2,0.5)) 
         
     
  
     def draw_scene(self):
         """[Opengl render loop]
         """
-        # _, image = self.webcam.read()# get image from webcam camera.
-        
         if self.image is not None:
             self.draw_background(self.image)  # draw background
             # glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -200,6 +200,10 @@ class AR_Render:
             else:
                 model_matrix =  self.pre_extrinsicMatrix
             
+            glEnable(GL_LIGHTING)
+            glEnable(GL_LIGHT0)
+            glEnable(GL_COLOR_MATERIAL)
+            glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE )
                 
             if model_matrix is not None:     
                 self.pre_extrinsicMatrix = model_matrix
@@ -207,6 +211,10 @@ class AR_Render:
                 glScaled(self.model_scale, self.model_scale, self.model_scale)
                 glTranslatef(self.translate_x, self.translate_y, self.translate_y)
                 glCallList(self.model.gl_list)
+
+            glDisable(GL_LIGHT0)
+            glDisable(GL_LIGHTING)
+            glDisable(GL_COLOR_MATERIAL)
                 
             cv2.waitKey(20)
     
