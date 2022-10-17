@@ -131,7 +131,7 @@ def parse_args():
     )
     parser.add_argument(
         "--debug",
-        type=bool, action="store_true", default=False,
+        action="store_true", default=False,
         help="enable debug mode"
     )
 
