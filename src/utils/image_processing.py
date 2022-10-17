@@ -5,6 +5,8 @@ import numpy as np
 import cv2
 from skimage import filters
 
+from utils.geometry import Quadrants, angle_quadrant, line_intersection
+
 Grayscale8UImageType = NDArray[Shape["N, M"], UInt8]
 Grayscale32FImageType = NDArray[Shape["N, M"], Float32]
 Colour8UImageType = NDArray[Shape["N, M, 3"], UInt8]
@@ -85,20 +87,39 @@ def get_quadrilateral_ord_corners(contour):
     # Create the pairs
     pairs = [(0, closest), (farthest, 6 - closest - farthest)]
     
+    card_center = line_intersection(
+        line_1=(pairs[0][0], pairs[1][0]),  # Anchor and Farthest points
+        line_2=(pairs[0][1], pairs[1][1])  # Closest and 2nd Closest
+    )
+
+    # Create vectors in relation to center of card
+    anchor_vector = pairs[0][0] - card_center
+    closest_vector = pairs[0][1] - card_center
+
+    # Calculate vector orientation angle [-π, π]
+    anchor_angle = np.arctan2(anchor_vector[1], anchor_vector[0])
+    closest_angle = np.arctan2(closest_vector[1], closest_vector[0])
+
+    # Normalize angle
+    if angle_quadrant(anchor_angle) == Quadrants.THIRD and angle_quadrant(closest_angle) == Quadrants.SECOND:
+        anchor_angle += np.pi * 2
+    if angle_quadrant(anchor_angle) == Quadrants.SECOND and angle_quadrant(closest_angle) == Quadrants.THIRD:
+        closest_angle += np.pi * 2
+
+    # Check if card flow orientation is in correct order, if not, reverse it
+    if anchor_angle < closest_angle:  # Incorrect flow
+        pairs[0] = pairs[0][::-1]
+        pairs[1] = pairs[1][::-1]
+    
     out_pts = [
         [contour[pair[1]], contour[pair[0]]]
             for pair in pairs
     ]
 
-    slope_12 = calc_slope(out_pts[0][0], out_pts[0][1])
-    slope_43 = calc_slope(out_pts[1][1], out_pts[1][0])
-
-
-
-    # out_pts = np.float32([
-    #     [contour[pair[1]], contour[pair[0]]]
-    #         for pair in pairs
-    # ]).reshape(-1, 1, 2)
+    out_pts = np.float32([
+        [contour[pair[1]], contour[pair[0]]]
+            for pair in pairs
+    ]).reshape(-1, 1, 2)
 
     return out_pts
 
