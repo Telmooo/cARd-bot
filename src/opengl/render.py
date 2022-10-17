@@ -105,7 +105,7 @@ class AR_Render:
         glLight(GL_LIGHT0, GL_POSITION,  (2, 0, 2, 1))
         glLightfv(GL_LIGHT0, GL_AMBIENT, (0, 0, 0, 0.1))
         glLightfv(GL_LIGHT0, GL_SPECULAR, (0.2, 0.2, 0.2, 0.5))
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.2,0.2,0.2,0.5)) 
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.1,0.1,0.1,0.5)) 
         
     
  
@@ -203,7 +203,7 @@ class AR_Render:
             glEnable(GL_LIGHTING)
             glEnable(GL_LIGHT0)
             glEnable(GL_COLOR_MATERIAL)
-            glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE )
+            glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE | GL_SPECULAR)
                 
             if model_matrix is not None:     
                 self.pre_extrinsicMatrix = model_matrix
