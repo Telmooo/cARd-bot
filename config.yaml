@@ -12,8 +12,11 @@ contours:
   approxPolyDPEpsilon: 0.02
 filter:
   slopeThresh: 0.30
-card:
-  width: 500
-  height: 726
-  cornerWidth: 100
-  cornerHeight: 190
+cards:
+  dataset: "./data/cards_physical/rank_suit"
+  type: "split_rank_suit"
+  width: 225
+  height: 345
+  cornerWidth: 45
+  cornerHeight: 100
+  splitHeight: 60

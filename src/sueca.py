@@ -1,25 +1,8 @@
 
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import List, Optional
 
-class Rank(Enum):
-    Ace = auto()
-    Two = auto()
-    Three = auto()
-    Four = auto()
-    Five = auto()
-    Six = auto()
-    Seven = auto()
-    Jack = auto()
-    Queen = auto()
-    King = auto()
-
-class Suit(Enum):
-    Clubs = auto()
-    Diamonds = auto()
-    Hearts = auto()
-    Spades = auto()
+from data.load_dataset import Rank, Suit
 
 @dataclass()
 class Card:

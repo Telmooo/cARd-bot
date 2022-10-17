@@ -1,11 +1,14 @@
 from enum import Enum
-from typing import Tuple, Union
+from typing import Tuple, TypeVar, Union
 from nptyping import NDArray, Shape, Float
 
 import numpy as np
 
-VectorType = Union[Tuple[float, float], NDArray[Shape["2", Float]]]
-Vector2DType = Union[Tuple[VectorType, VectorType], NDArray[Shape["2, 2"], Float]]
+# VectorType = Union[Tuple[float, float], NDArray[Shape["2", Float]]]
+# Vector2DType = Union[Tuple[VectorType, VectorType], NDArray[Shape["2, 2"], Float]]
+VectorType = TypeVar("VectorType")
+Vector2DType = TypeVar("Vector2DType")
+
 
 class Quadrants(Enum):
     FIRST = 1

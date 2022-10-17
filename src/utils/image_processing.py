@@ -85,7 +85,10 @@ def get_quadrilateral_ord_corners(contour):
             farthest = idx 
 
     # Create the pairs
-    pairs = [(0, closest), (farthest, 6 - closest - farthest)]
+    pairs = [
+        (contour[0][0], contour[closest][0]),
+        (contour[farthest][0], contour[6 - closest - farthest][0])
+    ]
     
     card_center = line_intersection(
         line_1=(pairs[0][0], pairs[1][0]),  # Anchor and Farthest points
@@ -107,19 +110,11 @@ def get_quadrilateral_ord_corners(contour):
         closest_angle += np.pi * 2
 
     # Check if card flow orientation is in correct order, if not, reverse it
-    if anchor_angle < closest_angle:  # Incorrect flow
+    if anchor_angle > closest_angle:  # Incorrect flow
         pairs[0] = pairs[0][::-1]
         pairs[1] = pairs[1][::-1]
-    
-    out_pts = [
-        [contour[pair[1]], contour[pair[0]]]
-            for pair in pairs
-    ]
 
-    out_pts = np.float32([
-        [contour[pair[1]], contour[pair[0]]]
-            for pair in pairs
-    ]).reshape(-1, 1, 2)
+    out_pts = np.float32([pairs]).reshape(-1, 1, 2)
 
     return out_pts
 
@@ -176,9 +171,9 @@ def extract_cards(image, contours, params):
 
     target_pts = np.float32([
         [0, 0], # Top left
-        [params["card.width"] - 1, 0], # Top right
-        [params["card.width"] - 1, params["card.height"] - 1], # Bottom right
-        [0, params["card.height"] - 1], # Bottom left
+        [params["cards.width"] - 1, 0], # Top right
+        [params["cards.width"] - 1, params["cards.height"] - 1], # Bottom right
+        [0, params["cards.height"] - 1], # Bottom left
     ]).reshape(-1, 1, 2)
 
     cards = []
@@ -193,7 +188,7 @@ def extract_cards(image, contours, params):
 
         # M = cv2.perspectiveTransform(src_pts, target_pts)
         M, _mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)
-        card = cv2.warpPerspective(image, M, (params["card.width"], params["card.height"]))
+        card = cv2.warpPerspective(image, M, (params["cards.width"], params["cards.height"]))
         
         cards.append(card)
 
@@ -203,33 +198,57 @@ def extract_cards(image, contours, params):
 def extract_card_corners(cards, params):
     card_corners = [
         card[
-            0:params["card.cornerHeight"],
-            0:params["card.cornerWidth"]
+            0:params["cards.cornerHeight"],
+            0:params["cards.cornerWidth"]
         ] for card in cards
     ]
 
     return card_corners
 
+def extract_card_rank_suit(cards, params):
+    cards_rank_suit = [
+        (
+            card[
+                0:params["cards.splitHeight"]+5,
+                0:params["cards.cornerWidth"]+5
+            ],
+            card[
+                params["cards.splitHeight"]-5:params["cards.cornerHeight"]+5,
+                0:params["cards.cornerWidth"]+5
+            ]
+        ) for card in cards
+    ]
+
+    return cards_rank_suit
+
 def template_matching(
     frame: Union[GrayscaleImageType, ColourImageType],
     template: Union[GrayscaleImageType, ColourImageType],
-    method: int = cv2.TM_CCOEFF_NORMED
+    method: int = cv2.TM_CCOEFF_NORMED, temp="ls"
 ):
     w, h = template.shape[::-1]
 
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    res = cv2.matchTemplate(frame_gray, template, method)
-    _min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+    thresh_frame = np.uint8(frame_gray < 127) * 255
+    thresh_template = np.uint8(template < 127) * 255
+    res = cv2.matchTemplate(thresh_frame, thresh_template, method)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
     if method is cv2.TM_SQDIFF_NORMED or method is cv2.TM_SQDIFF:
         top_left = min_loc
+        match_val = min_val
     else:
         top_left = max_loc
+        match_val = max_val
 
     match = frame[
         top_left[1]:top_left[1] + w,
         top_left[0]:top_left[0] + h
     ]
 
-    return frame, max_val
+    cv2.imshow(f"{temp}FRAME_DEBUG", thresh_frame)
+    cv2.imshow(f"{temp}TEMPLATE_DEBUG", thresh_template)
+    cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 500, 500 + 500 * (temp != "rank"))
+    cv2.moveWindow(f"{temp}FRAME_DEBUG", 1000, 500 + 500 * (temp != "rank"))
+
+    return match, match_val
