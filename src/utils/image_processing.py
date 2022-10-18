@@ -257,6 +257,9 @@ def template_matching(
     # thresh_frame = np.uint8(frame_gray < 128) * 255
     # thresh_template = np.uint8(template < 128) * 255
 
+
+    # if thresh_template.shape[0] > thresh_frame.shape[0] or thresh_template.shape[1] > thresh_frame.shape[1]:
+    thresh_template = cv2.resize(thresh_template, (thresh_frame.shape[1], thresh_frame.shape[0]))
     
     res = cv2.matchTemplate(thresh_frame, thresh_template, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)

@@ -15,8 +15,8 @@ filter:
 cards:
   dataset: "./data/cards_physical/rank_suit"
   type: "split_rank_suit"
-  width: 225
+  width: 230
   height: 345
-  cornerWidth: 45
-  cornerHeight: 100
-  splitHeight: 60
+  cornerWidth: 40
+  cornerHeight: 90
+  splitHeight: 50
