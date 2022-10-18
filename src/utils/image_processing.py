@@ -255,7 +255,8 @@ def extract_card_corners(cards, params):
     return card_corners
 
 def filter_bound_rect(x):
-    return x[0]-x[1] > 10 and x[2]-x[3] > 10
+    proportion_ratio = (x[1]+x[3])/(x[0]+x[2])
+    return proportion_ratio > 3 or proportion_ratio < 0.03
 
 
 def extract_card_rank_suit(cards, params):
@@ -292,12 +293,11 @@ def extract_card_rank_suit(cards, params):
     cards_rank_suit = []
     if len(bound_rect) >= 2:
         cards_rank_suit = [
-        
-                (card[bound_rect[1][1]:bound_rect[1][1]+bound_rect[1][3],
-                     bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]],
-                 card[bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
-                      bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]])
-                for card in card_corners
+            (card[bound_rect[1][1]:bound_rect[1][1]+bound_rect[1][3],
+                    bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]],
+                card[bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
+                    bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]])
+            for card in card_corners
         ]
     
     for (rank, suit) in cards_rank_suit:
@@ -313,37 +313,14 @@ def template_matching(
 ):
     w, h = template.shape[::-1]
 
-    frame_gray = frame
-
-    # frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    # frame_gray = cv2.GaussianBlur(frame_gray,(3,3),0)
-    # template = cv2.GaussianBlur(template,(3,3),0)
-
-    # frame_gray = cv2.medianBlur(frame_gray, 3)
-    # template = cv2.medianBlur(template, 3)
-
-    # thresh_frame = cv2.adaptiveThreshold(frame_gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-    #         cv2.THRESH_BINARY,11,0)
-    # thresh_template = cv2.adaptiveThreshold(template,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-    #         cv2.THRESH_BINARY,11,0)
-
-    # frame_gray = cv2.GaussianBlur(frame_gray,(3,3),0)
-    # template = cv2.GaussianBlur(template,(3,3),0)
-    _ret, thresh_frame = cv2.threshold(frame_gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    # binarize the template
     _ret, thresh_template = cv2.threshold(template,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-    # _ret, thresh_frame = cv2.threshold(frame_gray,127,255,cv2.THRESH_BINARY)
-    # _ret, thresh_template = cv2.threshold(template,127,255,cv2.THRESH_BINARY)
-
-    # thresh_frame = np.uint8(frame_gray < 128) * 255
-    # thresh_template = np.uint8(template < 128) * 255
-
-
-    # if thresh_template.shape[0] > thresh_frame.shape[0] or thresh_template.shape[1] > thresh_frame.shape[1]:
-    # thresh_template = cv2.resize(thresh_template, (thresh_frame.shape[1], thresh_frame.shape[0]))
     
-    res = cv2.matchTemplate(thresh_frame, thresh_template, method)
+    if thresh_template.shape[0] * thresh_template.shape[1] > frame.shape[0] * frame.shape[1]:
+        frame = cv2.resize(frame, (thresh_template.shape[1], thresh_template.shape[0]))
+
+    # template match (suit/rank) with frame
+    res = cv2.matchTemplate(frame, thresh_template, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
     if method is cv2.TM_SQDIFF_NORMED or method is cv2.TM_SQDIFF:
@@ -358,7 +335,7 @@ def template_matching(
         top_left[0]:top_left[0] + h
     ]
 
-    cv2.imshow(f"{temp}FRAME_DEBUG", thresh_frame)
+    cv2.imshow(f"{temp}FRAME_DEBUG", frame)
     cv2.imshow(f"{temp}TEMPLATE_DEBUG", thresh_template)
     cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 300, 300 + 300 * (temp != "rank"))
     cv2.moveWindow(f"{temp}FRAME_DEBUG", 600, 300 + 300 * (temp != "rank"))
@@ -394,7 +371,5 @@ def feature_point_matching(template, frame ):
                     matchesMask = matchesMask,
                     flags = cv2.DrawMatchesFlags_DEFAULT)
     img3 = cv2.drawMatchesKnn(template,kp1,frame,kp2,matches,None,**draw_params)
-    
-
 
     return img3, matches

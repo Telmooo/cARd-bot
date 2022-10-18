@@ -13,7 +13,7 @@ contours:
 filter:
   slopeThresh: 0.30
 cards:
-  dataset: "./data/cards_normal/rank_suit"
+  dataset: "./data/cards_physical/rank_suit"
   type: "split_rank_suit"
   width: 220
   height: 335
