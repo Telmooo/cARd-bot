@@ -1,8 +1,9 @@
 from enum import Enum
+from math import sqrt
 from typing import Tuple, TypeVar, Union
-from nptyping import NDArray, Shape, Float
 
 import numpy as np
+from nptyping import Float, NDArray, Shape
 
 # VectorType = Union[Tuple[float, float], NDArray[Shape["2", Float]]]
 # Vector2DType = Union[Tuple[VectorType, VectorType], NDArray[Shape["2, 2"], Float]]
@@ -71,6 +72,16 @@ def line_intersection(
         return np.array([np.inf, np.inf])
 
     return np.array([x / z, y / z])
+
+def distance_to_line(p1, p2, point):
+    x1, y1 = p1
+    x2, y2 = p2
+    x, y = point
+
+    return (
+        abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1)) /
+        sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2))
+    )
 
 def angle_quadrant(angle: float) -> Quadrants:
     """Get quadrant number of the given angle.

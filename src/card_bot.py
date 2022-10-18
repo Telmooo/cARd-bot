@@ -9,7 +9,7 @@ import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from utils.draw import draw_grid
-from utils.image_processing import binarize, contour_filter, enhance_image, extract_card_corners, extract_card_rank_suit, extract_cards, extract_contours, feature_point_matching, template_matching
+from utils.image_processing import *
 
 def run(params) -> None:
 
@@ -49,7 +49,8 @@ def run(params) -> None:
             # if config.DEBUG_MODE:
             #     cv2.imshow("Binarized Image", thresh_frame)
 
-            contours = extract_contours(thresh_frame, params["config"])
+            # contours = extract_contours(thresh_frame, params["config"])
+            contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards = extract_cards(cv2.cvtColor(og_frame, cv2.COLOR_BGR2GRAY), contours, params["config"])
 
@@ -187,7 +188,6 @@ def run(params) -> None:
                         lineType=cv2.LINE_AA
                     )
 
-
                 cv2.imshow("Contours Frame", debug_frame)
 
             
@@ -211,24 +211,22 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
-        nargs=2, metavar=("MODE", "CPOINT"),
+        required=True, nargs=2, metavar=("MODE", "CPOINT"),
         help="\n".join([
             "specify type of acquisition and connection point",
             "- MODE=usb - connection point is device number",
             "- MODE=wifi - connection point is the URL to access frame"
         ]),
-        required=True
     )
     parser.add_argument(
         "--config",
         type=str, help="path to config.yaml",
         default="./config.yaml",
-        required=True
     )
     parser.add_argument(
         "--debug",
         action="store_true", default=False,
-        help="enable debug mode"
+        help="enable debug mode",
     )
 
     args = parser.parse_args()

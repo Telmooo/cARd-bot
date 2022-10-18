@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 from cv2 import COLOR_GRAY2BGR
 from nptyping import Float32, NDArray, Shape, UInt8
 
@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 from skimage import filters
 
-from utils.geometry import Quadrants, angle_quadrant, line_intersection
+from utils.geometry import Quadrants, angle_quadrant, distance_to_line, line_intersection
 
 Grayscale8UImageType = NDArray[Shape["N, M"], UInt8]
 Grayscale32FImageType = NDArray[Shape["N, M"], Float32]
@@ -71,6 +71,51 @@ def extract_contours(binary_image: Grayscale8UImageType, params: Dict[str, Any])
     ]
 
     return contours
+
+def detect_corners_polygonal_approximation(binary_image: Grayscale8UImageType) -> List[NDArray]:
+    # Find the full contours of the binarized image
+    contours, _hierarchy = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+    res = []
+
+    for contour in contours:
+        # Pick two points separated by approximately half the contour length
+        half = len(contour) // 2
+        a, b = contour[0][0], contour[half][0]
+
+        def farthest_along_contour(p1, p2, start=0, end=None):
+            if end is None:
+                end = len(contour) - 1
+
+            max_dist = 0
+            i = start
+
+            while i != end:
+                dist = distance_to_line(p1, p2, contour[i][0])
+                if dist >= max_dist:
+                    idx = i
+                    max_dist = dist
+
+                i = (i + 1) % len(contour)
+
+            return idx
+
+        # Find the points C and D that are most distant to line AB
+        c_idx = farthest_along_contour(a, b, end=half - 1)
+        d_idx = farthest_along_contour(a, b, half)
+
+        c, d = contour[c_idx], contour[d_idx]
+
+        # Find the points E and F that are most distant to line CD
+        e_idx = farthest_along_contour(c[0], d[0], c_idx, d_idx - 1)
+        f_idx = farthest_along_contour(c[0], d[0], d_idx, c_idx - 1)
+
+        e, f = contour[e_idx], contour[f_idx]
+
+        # Corners of the quadrilateral are C, D, E and F
+        res.append(np.array([c, e, d, f]))
+
+    return res
 
 def get_quadrilateral_ord_corners(contour):
     anchor_point = contour[0][0] # Top left
