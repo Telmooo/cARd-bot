@@ -209,6 +209,10 @@ def extract_card_corners(cards, params):
 
     return card_corners
 
+def filter_bound_rect(x):
+    return x[0]-x[1] > 10 and x[2]-x[3] > 10
+
+
 def extract_card_rank_suit(cards, params):
     
     card_corners = extract_card_corners(cards, params)
@@ -228,10 +232,10 @@ def extract_card_rank_suit(cards, params):
             poly_contours[i] = cv2.approxPolyDP(curve, 0.04 * cv2.arcLength(curve, True), True)
             bound_rect[i] = cv2.boundingRect(poly_contours[i])
         
-        
-
-        
         bound_rect = sorted(bound_rect, key=lambda x : x[2] * x[3])
+        
+        
+        filter(filter_bound_rect, bound_rect)
         bound_rect = bound_rect[-3:-1]
         
         # corner = cv2.cvtColor(corner, cv2.COLOR_GRAY2BGR)
@@ -239,23 +243,8 @@ def extract_card_rank_suit(cards, params):
         #     cv2.rectangle(corner, (int(bound_rect[i][0]), int(bound_rect[i][1])), \
         #     (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
         # cv2.imshow("Contour Corner", corner)
-        
-    
-    # cards_rank_suit = [
-    #     (
-    #         card[
-    #             0:params["cards.splitHeight"]+5,
-    #             0:params["cards.cornerWidth"]+5
-    #         ],
-    #         card[
-    #             params["cards.splitHeight"]-5:params["cards.cornerHeight"]+5,
-    #             0:params["cards.cornerWidth"]+5
-    #         ]
-    #     ) for card in cards
-    # ]
     
     cards_rank_suit = []
-    print(len(bound_rect))
     if len(bound_rect) >= 2:
         cards_rank_suit = [
         
@@ -263,19 +252,14 @@ def extract_card_rank_suit(cards, params):
                      bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]],
                  card[bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
                       bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]])
-                # card[bound_rect[0][1]+bound_rect[0][3]:bound_rect[0][0]+bound_rect[0,2]])
                 for card in card_corners
         ]
     
-    
-    print("======\n", bound_rect, cards_rank_suit)
     for (rank, suit) in cards_rank_suit:
-        # print(rank)
         cv2.imshow("RANK", rank)
         cv2.imshow("SUIT", suit)
 
-    return []
-    # return cards_rank_suit
+    return cards_rank_suit
 
 def template_matching(
     frame: Union[GrayscaleImageType, ColourImageType],
