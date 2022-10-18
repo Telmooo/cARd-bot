@@ -189,7 +189,10 @@ def extract_cards(image, contours, params):
         # M = cv2.perspectiveTransform(src_pts, target_pts)
         M, _mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)
         card = cv2.warpPerspective(image, M, (params["cards.width"], params["cards.height"]))
+
         
+        # card = cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
+        # card = enhance_image(card, params)
         cards.append(card)
 
     cv2.imshow("Corner Order", debug_img)
@@ -228,9 +231,33 @@ def template_matching(
 ):
     w, h = template.shape[::-1]
 
-    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    thresh_frame = np.uint8(frame_gray < 127) * 255
-    thresh_template = np.uint8(template < 127) * 255
+    frame_gray = frame
+
+    # frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # frame_gray = cv2.GaussianBlur(frame_gray,(3,3),0)
+    # template = cv2.GaussianBlur(template,(3,3),0)
+
+    # frame_gray = cv2.medianBlur(frame_gray, 3)
+    # template = cv2.medianBlur(template, 3)
+
+    # thresh_frame = cv2.adaptiveThreshold(frame_gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+    #         cv2.THRESH_BINARY,11,0)
+    # thresh_template = cv2.adaptiveThreshold(template,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+    #         cv2.THRESH_BINARY,11,0)
+
+    frame_gray = cv2.GaussianBlur(frame_gray,(3,3),0)
+    template = cv2.GaussianBlur(template,(3,3),0)
+    _ret, thresh_frame = cv2.threshold(frame_gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    _ret, thresh_template = cv2.threshold(template,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
+    # _ret, thresh_frame = cv2.threshold(frame_gray,127,225,cv2.THRESH_BINARY)
+    # _ret, thresh_template = cv2.threshold(template,127,225,cv2.THRESH_BINARY)
+
+    # thresh_frame = np.uint8(frame_gray < 128) * 255
+    # thresh_template = np.uint8(template < 128) * 255
+
+    
     res = cv2.matchTemplate(thresh_frame, thresh_template, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
@@ -248,7 +275,41 @@ def template_matching(
 
     cv2.imshow(f"{temp}FRAME_DEBUG", thresh_frame)
     cv2.imshow(f"{temp}TEMPLATE_DEBUG", thresh_template)
-    cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 500, 500 + 500 * (temp != "rank"))
-    cv2.moveWindow(f"{temp}FRAME_DEBUG", 1000, 500 + 500 * (temp != "rank"))
+    cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 300, 300 + 300 * (temp != "rank"))
+    cv2.moveWindow(f"{temp}FRAME_DEBUG", 600, 300 + 300 * (temp != "rank"))
 
     return match, match_val
+
+
+sift  = cv2.SIFT_create()
+
+def feature_point_matching(template, frame ):
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(template,None)
+    kp2, des2 = sift.detectAndCompute(frame,None)
+
+    # FLANN parameters
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks=50)   # or pass empty dictionary
+    flann = cv2.FlannBasedMatcher(index_params,search_params)
+
+    if des1 is None or des2 is None or len(des1) > len(des2):
+        return None, []
+    matches = flann.knnMatch(des1,des2,k=2)
+    # Need to draw only good matches, so create a mask
+    matchesMask = [[0,0] for i in range(len(matches))]
+    # ratio test as per Lowe's paper
+    for i,(m,n) in enumerate(matches):
+        if m.distance < 0.8*n.distance:
+            matchesMask[i]=[1,0]
+    draw_params = dict(matchColor = (0,255,0),
+                    singlePointColor = (255,0,0),
+                    matchesMask = matchesMask,
+                    flags = cv2.DrawMatchesFlags_DEFAULT)
+    img3 = cv2.drawMatchesKnn(template,kp1,frame,kp2,matches,None,**draw_params)
+    
+
+
+    return img3, matches
