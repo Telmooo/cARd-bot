@@ -17,6 +17,6 @@ cards:
   type: "split_rank_suit"
   width: 230
   height: 345
-  cornerWidth: 40
-  cornerHeight: 90
+  cornerWidth: 42
+  cornerHeight: 100
   splitHeight: 50

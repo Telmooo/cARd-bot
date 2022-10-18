@@ -1,4 +1,5 @@
 from typing import Any, Dict, Union
+from cv2 import COLOR_GRAY2BGR
 from nptyping import Float32, NDArray, Shape, UInt8
 
 import numpy as np
@@ -195,34 +196,86 @@ def extract_cards(image, contours, params):
         # card = enhance_image(card, params)
         cards.append(card)
 
-    cv2.imshow("Corner Order", debug_img)
+    # cv2.imshow("Corner Order", debug_img)
     return cards
 
 def extract_card_corners(cards, params):
     card_corners = [
         card[
-            0:params["cards.cornerHeight"],
-            0:params["cards.cornerWidth"]
+            0:params["cards.cornerHeight"]-10,
+            0:params["cards.cornerWidth"]-10
         ] for card in cards
     ]
 
     return card_corners
 
 def extract_card_rank_suit(cards, params):
-    cards_rank_suit = [
-        (
-            card[
-                0:params["cards.splitHeight"]+5,
-                0:params["cards.cornerWidth"]+5
-            ],
-            card[
-                params["cards.splitHeight"]-5:params["cards.cornerHeight"]+5,
-                0:params["cards.cornerWidth"]+5
-            ]
-        ) for card in cards
-    ]
+    
+    card_corners = extract_card_corners(cards, params)
 
-    return cards_rank_suit
+    bound_rect = []
+    for i, corner in enumerate(card_corners):
+        # corner = binarize(corner, params)
+        
+        _ret, corner = cv2.threshold(corner,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        card_corners[i] = corner
+        
+        contours, _hierarchy = cv2.findContours(corner, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        
+        poly_contours = [None] * len(contours)
+        bound_rect = [None] * len(contours)
+        for i, curve in enumerate(contours):
+            poly_contours[i] = cv2.approxPolyDP(curve, 0.04 * cv2.arcLength(curve, True), True)
+            bound_rect[i] = cv2.boundingRect(poly_contours[i])
+        
+        
+
+        
+        bound_rect = sorted(bound_rect, key=lambda x : x[2] * x[3])
+        bound_rect = bound_rect[-3:-1]
+        
+        # corner = cv2.cvtColor(corner, cv2.COLOR_GRAY2BGR)
+        # for i in range(len(bound_rect)):
+        #     cv2.rectangle(corner, (int(bound_rect[i][0]), int(bound_rect[i][1])), \
+        #     (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
+        # cv2.imshow("Contour Corner", corner)
+        
+    
+    # cards_rank_suit = [
+    #     (
+    #         card[
+    #             0:params["cards.splitHeight"]+5,
+    #             0:params["cards.cornerWidth"]+5
+    #         ],
+    #         card[
+    #             params["cards.splitHeight"]-5:params["cards.cornerHeight"]+5,
+    #             0:params["cards.cornerWidth"]+5
+    #         ]
+    #     ) for card in cards
+    # ]
+    
+    cards_rank_suit = []
+    print(len(bound_rect))
+    if len(bound_rect) >= 2:
+        cards_rank_suit = [
+        
+                (card[bound_rect[1][1]:bound_rect[1][1]+bound_rect[1][3],
+                     bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]],
+                 card[bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
+                      bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]])
+                # card[bound_rect[0][1]+bound_rect[0][3]:bound_rect[0][0]+bound_rect[0,2]])
+                for card in card_corners
+        ]
+    
+    
+    print("======\n", bound_rect, cards_rank_suit)
+    for (rank, suit) in cards_rank_suit:
+        # print(rank)
+        cv2.imshow("RANK", rank)
+        cv2.imshow("SUIT", suit)
+
+    return []
+    # return cards_rank_suit
 
 def template_matching(
     frame: Union[GrayscaleImageType, ColourImageType],
@@ -246,20 +299,20 @@ def template_matching(
     # thresh_template = cv2.adaptiveThreshold(template,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
     #         cv2.THRESH_BINARY,11,0)
 
-    frame_gray = cv2.GaussianBlur(frame_gray,(3,3),0)
-    template = cv2.GaussianBlur(template,(3,3),0)
+    # frame_gray = cv2.GaussianBlur(frame_gray,(3,3),0)
+    # template = cv2.GaussianBlur(template,(3,3),0)
     _ret, thresh_frame = cv2.threshold(frame_gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     _ret, thresh_template = cv2.threshold(template,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
-    # _ret, thresh_frame = cv2.threshold(frame_gray,127,225,cv2.THRESH_BINARY)
-    # _ret, thresh_template = cv2.threshold(template,127,225,cv2.THRESH_BINARY)
+    # _ret, thresh_frame = cv2.threshold(frame_gray,127,255,cv2.THRESH_BINARY)
+    # _ret, thresh_template = cv2.threshold(template,127,255,cv2.THRESH_BINARY)
 
     # thresh_frame = np.uint8(frame_gray < 128) * 255
     # thresh_template = np.uint8(template < 128) * 255
 
 
     # if thresh_template.shape[0] > thresh_frame.shape[0] or thresh_template.shape[1] > thresh_frame.shape[1]:
-    thresh_template = cv2.resize(thresh_template, (thresh_frame.shape[1], thresh_frame.shape[0]))
+    # thresh_template = cv2.resize(thresh_template, (thresh_frame.shape[1], thresh_frame.shape[0]))
     
     res = cv2.matchTemplate(thresh_frame, thresh_template, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
