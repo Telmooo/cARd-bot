@@ -1,0 +1,22 @@
+gaussianBlur:
+  kernelSize: 3
+  sigmaX: 20
+  sigmaY: 0
+clahe:
+  clipLimit: 3
+  tileGridSize: 2
+hysteresis:
+  lowerThresh: 150
+  highThresh: 200
+contours:
+  approxPolyDPEpsilon: 0.02
+filter:
+  slopeThresh: 0.30
+cards:
+  dataset: "./data/cards_normal/rank_suit"
+  type: "split_rank_suit"
+  width: 220
+  height: 335
+  cornerWidth: 50
+  cornerHeight: 100
+  splitHeight: 50
