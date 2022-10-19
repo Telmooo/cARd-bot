@@ -1,5 +1,5 @@
+
 from typing import Any, Dict, List, Union
-from cv2 import COLOR_GRAY2BGR
 from nptyping import Float32, NDArray, Shape, UInt8
 
 import numpy as np
@@ -211,7 +211,6 @@ def contour_filter(contour, params, eps=1e-6):
     return True
 
 def extract_cards(image, contours, params):
-    
     # Filter contours
     filtered_contours = list(filter(lambda x: contour_filter(x, params), contours))
 
@@ -231,12 +230,10 @@ def extract_cards(image, contours, params):
         for idx, corner in enumerate(src_pts):
             cv2.circle(debug_img, np.int32(corner[0]), 5, COLOURS[idx], 2)
 
-
         # M = cv2.perspectiveTransform(src_pts, target_pts)
         M, _mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)
         card = cv2.warpPerspective(image, M, (params["cards.width"], params["cards.height"]))
 
-        
         # card = cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
         # card = enhance_image(card, params)
         cards.append(card)
@@ -247,64 +244,80 @@ def extract_cards(image, contours, params):
 def extract_card_corners(cards, params):
     card_corners = [
         card[
-            0:params["cards.cornerHeight"]-10,
-            0:params["cards.cornerWidth"]-10
+            0:params["cards.cornerHeight"] - 10,
+            0:params["cards.cornerWidth"] - 10
         ] for card in cards
     ]
 
     return card_corners
 
 def filter_bound_rect(x):
-    proportion_ratio = (x[1]+x[3])/(x[0]+x[2])
-    return proportion_ratio > 3 or proportion_ratio < 0.03
-
+    proportion_ratio = x[3] / x[2]
+    return proportion_ratio > 1 and proportion_ratio < 3 and x[2] > 15 and x[3] > 15
 
 def extract_card_rank_suit(cards, params):
-    
     card_corners = extract_card_corners(cards, params)
 
     bound_rect = []
     for i, corner in enumerate(card_corners):
-        # corner = binarize(corner, params)
-        
-        _ret, corner = cv2.threshold(corner,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        card_corners[i] = corner
-        
-        contours, _hierarchy = cv2.findContours(corner, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        
+        corner_gray = cv2.cvtColor(corner, cv2.COLOR_BGR2GRAY)
+        _ret, corner_gray = cv2.threshold(corner_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        contours, _hierarchy = cv2.findContours(corner_gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
         poly_contours = [None] * len(contours)
         bound_rect = [None] * len(contours)
         for i, curve in enumerate(contours):
             poly_contours[i] = cv2.approxPolyDP(curve, 0.04 * cv2.arcLength(curve, True), True)
             bound_rect[i] = cv2.boundingRect(poly_contours[i])
-        
-        bound_rect = sorted(bound_rect, key=lambda x : x[2] * x[3])
-        
-        
-        filter(filter_bound_rect, bound_rect)
+
+        bound_rect = sorted(bound_rect, key=lambda x: x[2] * x[3])
+
+        # Filter contours with invalid size or aspect ratio
+        bound_rect = list(filter(filter_bound_rect, bound_rect))
+        # Get the second and third largest contours (largest contour is generally the image border)
         bound_rect = bound_rect[-3:-1]
-        
+
         # corner = cv2.cvtColor(corner, cv2.COLOR_GRAY2BGR)
         # for i in range(len(bound_rect)):
         #     cv2.rectangle(corner, (int(bound_rect[i][0]), int(bound_rect[i][1])), \
         #     (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
         # cv2.imshow("Contour Corner", corner)
-    
+
     cards_rank_suit = []
     if len(bound_rect) >= 2:
         cards_rank_suit = [
-            (card[bound_rect[1][1]:bound_rect[1][1]+bound_rect[1][3],
-                    bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]],
-                card[bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
-                    bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]])
+            (
+                card[
+                    bound_rect[1][1]:bound_rect[1][1]+bound_rect[1][3],
+                    bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]
+                    ],
+                card[
+                    bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
+                    bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]
+                ]
+            )
             for card in card_corners
         ]
-    
-    for (rank, suit) in cards_rank_suit:
-        cv2.imshow("RANK", rank)
-        cv2.imshow("SUIT", suit)
+
+    for rank, suit in cards_rank_suit:
+        cv2.imshow("Rank", rank)
+        cv2.imshow("Suit", suit)
 
     return cards_rank_suit
+
+def is_red_suit(card_suit) -> bool:
+    # Convert to HSV representation
+    hsv = cv2.cvtColor(card_suit, cv2.COLOR_BGR2HSV)
+
+    # Red color wraps around in HSV space, so we need two masks
+    mask1 = cv2.inRange(hsv, np.array[0, 70, 50], np.array([10, 255, 255]))
+    mask2 = cv2.inRange(hsv, np.array[170, 70, 50], np.array([180, 255, 255]))
+
+    mask = mask1 | mask2
+
+    # TODO: finish implementation
+    return False
 
 def template_matching(
     frame: Union[GrayscaleImageType, ColourImageType],

@@ -26,10 +26,10 @@ def run(params) -> None:
         load_colour=False
     )
 
-    cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
-    print("Rank Templates", [key.name for key in dataset_ranks.keys()])
-    cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
-    print("Suit Templates", [key.name for key in dataset_suits.keys()])
+    # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
+    # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
+    # cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
+    # print("Suit Templates", [key.name for key in dataset_suits.keys()])
     
     # for rank in dataset_ranks.keys():
     #     dataset_ranks[rank] = enhance_image(dataset_ranks[rank], params["config"])
@@ -39,9 +39,8 @@ def run(params) -> None:
 
     while True:
         try:
-
-            og_frame = camera.read_frame()
-            frame = cv2.cvtColor(og_frame, cv2.COLOR_BGR2GRAY)
+            orig_frame = camera.read_frame()
+            frame = cv2.cvtColor(orig_frame, cv2.COLOR_BGR2GRAY)
             frame = enhance_image(frame, params["config"])
 
             thresh_frame = binarize(frame, params["config"])
@@ -52,18 +51,26 @@ def run(params) -> None:
             # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
-            cards = extract_cards(cv2.cvtColor(og_frame, cv2.COLOR_BGR2GRAY), contours, params["config"])
-
+            cards = extract_cards(orig_frame, contours, params["config"])
 
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
             cards_labels = []
             for card_rank, card_suit in cards_rank_suit:
+                # TODO: refactor this
+                def binarize_rank_suit(img):
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    _ret, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                    return img
+                
+                card_rank = binarize_rank_suit(card_rank)
+                card_suit = binarize_rank_suit(card_suit)
+
                 rank_match: Dict[Rank, Tuple[float, np.ndarray]] = {}
                 for rank, template_rank in dataset_ranks.items():
                     match, match_val = template_matching(card_rank, template_rank, method=cv2.TM_CCORR_NORMED, temp="rank")
                     rank_match[rank] = (match_val, match)
-                
+
                 suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
                     match, match_val = template_matching(card_suit, template_suit, method=cv2.TM_CCORR_NORMED, temp="suit")
@@ -79,7 +86,7 @@ def run(params) -> None:
                 )
 
             if config.DEBUG_MODE:
-                debug_frame = og_frame.copy()
+                debug_frame = orig_frame.copy()
                 filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
                 cv2.drawContours(debug_frame, filtered_contours, -1 ,(0, 0, 255), 2)
 
@@ -106,8 +113,8 @@ def run(params) -> None:
                     )
 
                 cv2.imshow("Contours Frame", debug_frame)
-            
-            cv2.imshow("Camera Frame", og_frame)
+
+            # cv2.imshow("Camera Frame", orig_frame)
 
             if cards:
                 pass
