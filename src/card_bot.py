@@ -58,7 +58,6 @@ def run(params) -> None:
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
             cards_labels = []
-
             for card_rank, card_suit in cards_rank_suit:
                 # TODO: refactor this
                 def binarize_rank_suit(img):
@@ -69,20 +68,23 @@ def run(params) -> None:
                 card_rank = binarize_rank_suit(card_rank)
                 card_suit = binarize_rank_suit(card_suit)
 
-                rank_match: List[Rank, Tuple[float, np.ndarray]] = []
+                rank_match: Dict[Rank, Tuple[float, np.ndarray]] = {}
                 for rank, template_rank in dataset_ranks.items():
                     match, match_val = template_matching(card_rank, template_rank, method=cv2.TM_CCORR_NORMED, temp="rank")
-                    rank_match.append((rank, match_val, match.copy()))
+                    rank_match[rank] = (match_val, match)
 
-                suit_match: List[Suit, Tuple[float, np.ndarray]] = []
+                suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
                     match, match_val = template_matching(card_suit, template_suit, method=cv2.TM_CCORR_NORMED, temp="suit")
-                    suit_match.append((suit, match_val, match.copy()))
+                    suit_match[suit] = (match_val, match)
 
-                max_rank_match = max(rank_match, key=lambda item: item[1])
-                max_suit_match = max(suit_match, key=lambda item: item[1])
+                max_rank_match = max(rank_match, key=lambda k: rank_match[k][0])
+                max_suit_match = max(suit_match, key=lambda k: suit_match[k][0])
+
                 cards_labels.append(
-                    (max_rank_match, max_suit_match)
+                    ((max_rank_match.name,) + rank_match[max_rank_match],
+                     (max_suit_match.name,) + suit_match[max_suit_match]
+                    )
                 )
 
             if config.DEBUG_MODE:
@@ -93,7 +95,7 @@ def run(params) -> None:
                 for idx, label in enumerate(cards_labels):
                     cv2.putText(
                         img=debug_frame,
-                        text=f"{label[0][0].name} of {label[1][0].name}",
+                        text=f"{label[0][0]} of {label[1][0]}",
                         org=(filtered_contours[idx][0][0] - np.array([-50, 50])),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
