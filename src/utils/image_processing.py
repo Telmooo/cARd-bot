@@ -5,6 +5,7 @@ from nptyping import Float32, NDArray, Shape, UInt8
 import numpy as np
 import cv2
 from skimage import filters
+from utils.draw import draw_grid
 
 from utils.geometry import Quadrants, angle_quadrant, distance_to_line, line_intersection
 
@@ -244,8 +245,8 @@ def extract_cards(image, contours, params):
 def extract_card_corners(cards, params):
     card_corners = [
         card[
-            0:params["cards.cornerHeight"] - 10,
-            0:params["cards.cornerWidth"] - 10
+            0:params["cards.cornerHeight"],
+            0:params["cards.cornerWidth"]
         ] for card in cards
     ]
 
@@ -327,14 +328,11 @@ def template_matching(
     w, h = template.shape[::-1]
 
 
-    # binarize the template
-    _ret, thresh_template = cv2.threshold(template,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    
-    if  frame.shape[0] <= thresh_template.shape[0] or frame.shape[1] <= thresh_template.shape[1]:
-        frame = cv2.resize(frame, (thresh_template.shape[1], thresh_template.shape[0]))
+    if  frame.shape[0] <= h or frame.shape[1] <= w:
+        frame = cv2.resize(frame, (w, h))
 
     # template match (suit/rank) with frame
-    res = cv2.matchTemplate(frame, thresh_template, method)
+    res = cv2.matchTemplate(frame, template, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
     if method is cv2.TM_SQDIFF_NORMED or method is cv2.TM_SQDIFF:
@@ -350,7 +348,7 @@ def template_matching(
     ]
 
     cv2.imshow(f"{temp}FRAME_DEBUG", frame)
-    cv2.imshow(f"{temp}TEMPLATE_DEBUG", thresh_template)
+    cv2.imshow(f"{temp}TEMPLATE_DEBUG", template)
     cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 300, 300 + 300 * (temp != "rank"))
     cv2.moveWindow(f"{temp}FRAME_DEBUG", 600, 300 + 300 * (temp != "rank"))
 

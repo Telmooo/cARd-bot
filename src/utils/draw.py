@@ -4,6 +4,9 @@ import numpy as np
 import cv2
 
 def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tuple[int, int]] = None):
+    if not images:
+        return np.array([])
+    
     grid = np.array(images)
     
     if grid.ndim == 3:
