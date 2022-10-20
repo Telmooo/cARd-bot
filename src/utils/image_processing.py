@@ -261,7 +261,8 @@ def extract_card_rank_suit(cards, params):
 
     bound_rect = []
     for i, corner in enumerate(card_corners):
-        corner_gray = cv2.cvtColor(corner, cv2.COLOR_BGR2GRAY)
+        # corner_gray = cv2.cvtColor(corner, cv2.COLOR_BGR2GRAY)
+        corner_gray = corner
         _ret, corner_gray = cv2.threshold(corner_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
         contours, _hierarchy = cv2.findContours(corner_gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -269,21 +270,21 @@ def extract_card_rank_suit(cards, params):
         poly_contours = [None] * len(contours)
         bound_rect = [None] * len(contours)
         for i, curve in enumerate(contours):
-            poly_contours[i] = cv2.approxPolyDP(curve, 0.04 * cv2.arcLength(curve, True), True)
+            poly_contours[i] = cv2.approxPolyDP(curve, 0.035 * cv2.arcLength(curve, True), True)
             bound_rect[i] = cv2.boundingRect(poly_contours[i])
 
         bound_rect = sorted(bound_rect, key=lambda x: x[2] * x[3])
 
         # Filter contours with invalid size or aspect ratio
-        bound_rect = list(filter(filter_bound_rect, bound_rect))
+        # bound_rect = list(filter(filter_bound_rect, bound_rect))
         # Get the second and third largest contours (largest contour is generally the image border)
         bound_rect = bound_rect[-3:-1]
 
-        # corner = cv2.cvtColor(corner, cv2.COLOR_GRAY2BGR)
-        # for i in range(len(bound_rect)):
-        #     cv2.rectangle(corner, (int(bound_rect[i][0]), int(bound_rect[i][1])), \
-        #     (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
-        # cv2.imshow("Contour Corner", corner)
+        corner = cv2.cvtColor(corner, cv2.COLOR_GRAY2BGR)
+        for i in range(len(bound_rect)):
+            cv2.rectangle(corner, (int(bound_rect[i][0]), int(bound_rect[i][1])), \
+            (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
+        cv2.imshow("Contour Corner", corner)
 
     cards_rank_suit = []
     if len(bound_rect) >= 2:
@@ -301,9 +302,11 @@ def extract_card_rank_suit(cards, params):
             for card in card_corners
         ]
 
-    for rank, suit in cards_rank_suit:
-        cv2.imshow("Rank", rank)
-        cv2.imshow("Suit", suit)
+    # for idx, (rank, suit) in enumerate(cards_rank_suit):
+    #     cv2.imshow(f"Rank - {idx}", rank)
+    #     cv2.imshow(f"Suit - {idx}", suit)
+    #     cv2.moveWindow(f"Rank - {idx}", 100*idx, 0)
+    #     cv2.moveWindow(f"Suit - {idx}", 100*idx, 100)
 
     return cards_rank_suit
 
@@ -328,8 +331,14 @@ def template_matching(
     w, h = template.shape[::-1]
 
 
+    
+    
+    
     if  frame.shape[0] <= h or frame.shape[1] <= w:
         frame = cv2.resize(frame, (w, h))
+        
+        
+    
 
     # template match (suit/rank) with frame
     res = cv2.matchTemplate(frame, template, method)

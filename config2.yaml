@@ -19,4 +19,4 @@ cards:
   height: 345
   cornerWidth: 50
   cornerHeight: 100
-  splitHeight: 50
+  # splitHeight: 50
