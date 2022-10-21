@@ -45,13 +45,13 @@ def run(params) -> None:
 
             thresh_frame = binarize(frame, params["config"])
 
-            if config.DEBUG_MODE:
-                cv2.imshow("Binarized Image", thresh_frame)
+            # if config.DEBUG_MODE:
+            #     cv2.imshow("Binarized Image", thresh_frame)
 
-            contours = extract_contours(thresh_frame, params["config"])
-            # contours = detect_corners_polygonal_approximation(thresh_frame)
+            # contours = extract_contours(thresh_frame, params["config"])
+            contours = detect_corners_polygonal_approximation(thresh_frame)
 
-            cards = extract_cards(frame, contours, params["config"])
+            cards = extract_cards(orig_frame, contours, params["config"])
             if cards:
                 cv2.imshow("Cards", draw_grid(cards))
 
@@ -59,27 +59,29 @@ def run(params) -> None:
 
             cards_labels = []
             for idx, (card_rank, card_suit) in enumerate(cards_rank_suit):
+                red = is_red_suit(card_suit)
+
                 # TODO: refactor this
                 def binarize_rank_suit(img):
-                    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     _ret, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                     return img
-                
+
                 card_rank = binarize_rank_suit(card_rank)
                 card_suit = binarize_rank_suit(card_suit)
 
-                top, left = int(0.05*card_rank.shape[0]), int(0.05*card_rank.shape[1])
+                top, left = int(0.05 * card_rank.shape[0]), int(0.05 * card_rank.shape[1])
                 card_rank = cv2.copyMakeBorder(card_rank, top, top, left, left, 
-                                                cv2.BORDER_CONSTANT, None, (255,255,255))
+                        cv2.BORDER_CONSTANT, None, (255,255,255))
 
-                top, left = int(0.05*card_suit.shape[0]), int(0.05*card_suit.shape[1])
+                top, left = int(0.05 * card_suit.shape[0]), int(0.05 * card_suit.shape[1])
                 card_suit = cv2.copyMakeBorder(card_suit, top, top, left, left,
-                                                cv2.BORDER_CONSTANT, None,  (255,255,255))
+                        cv2.BORDER_CONSTANT, None, (255,255,255))
 
-                cv2.imshow(f"Rank - {idx}", card_rank)
-                cv2.imshow(f"Suit - {idx}", card_suit)
-                cv2.moveWindow(f"Rank - {idx}", 100*idx, 0)
-                cv2.moveWindow(f"Suit - {idx}", 100*idx, 100)
+                # cv2.imshow(f"Rank - {idx}", card_rank)
+                # cv2.imshow(f"Suit - {idx}", card_suit)
+                # cv2.moveWindow(f"Rank - {idx}", 100*idx, 0)
+                # cv2.moveWindow(f"Suit - {idx}", 100*idx, 100)
 
                 rank_match: Dict[Rank, Tuple[float, np.ndarray]] = {}
                 for rank, template_rank in dataset_ranks.items():
@@ -88,6 +90,10 @@ def run(params) -> None:
 
                 suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
+                    # TODO: refactor
+                    if (red and suit in {Suit.Clubs, Suit.Spades}) or (not red and suit in {Suit.Hearts, Suit.Diamonds}):
+                        continue
+
                     match, match_val = template_matching(card_suit, template_suit, method=cv2.TM_CCORR_NORMED, temp="suit")
                     suit_match[suit] = (match_val, match)
 
@@ -103,13 +109,7 @@ def run(params) -> None:
             if config.DEBUG_MODE:
                 debug_frame = orig_frame.copy()
                 filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
-                cv2.drawContours(debug_frame, filtered_contours, -1 ,(0, 0, 255), 2)
-
-
-                # cs = ""
-                # for l in cards_labels:
-                #     cs += f"{l[0][0]} {l[1][0]} | " 
-                # print(cs)
+                cv2.drawContours(debug_frame, filtered_contours, -1, (0, 0, 255), 2)
 
                 for idx, label in enumerate(cards_labels):
                     cv2.putText(
@@ -118,7 +118,7 @@ def run(params) -> None:
                         org=(filtered_contours[idx][0][0] - np.array([-50, 50])),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
-                        color=(255, 255, 255),
+                        color=(85, 135, 0),
                         thickness=2,
                         lineType=cv2.LINE_AA
                     )
@@ -128,13 +128,13 @@ def run(params) -> None:
                         org=(filtered_contours[idx][0][0] - np.array([-50, 0])),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
-                        color=(255, 255, 255),
+                        color=(85, 135, 0),
                         thickness=2,
                         lineType=cv2.LINE_AA
                     )
 
                 cv2.imshow("Contours Frame", debug_frame)
-            
+
             # cv2.imshow("Camera Frame", orig_frame)
 
             if cards:
@@ -144,11 +144,8 @@ def run(params) -> None:
 
             if cv2.waitKey(1) == 27:
                 break
-
         except InterruptedError:
             break
-
-    pass
 
 def parse_args():
     parser = argparse.ArgumentParser()

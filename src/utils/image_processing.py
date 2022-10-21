@@ -259,10 +259,10 @@ def filter_bound_rect(x):
 def extract_card_rank_suit(cards, params):
     card_corners = extract_card_corners(cards, params)
 
-    bound_rect = []
+    cards_rank_suit = []
+
     for i, corner in enumerate(card_corners):
-        # corner_gray = cv2.cvtColor(corner, cv2.COLOR_BGR2GRAY)
-        corner_gray = corner
+        corner_gray = cv2.cvtColor(corner, cv2.COLOR_BGR2GRAY)
         _ret, corner_gray = cv2.threshold(corner_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
         contours, _hierarchy = cv2.findContours(corner_gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -286,40 +286,31 @@ def extract_card_rank_suit(cards, params):
         #     (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
         # cv2.imshow("Contour Corner", corner)
 
-    cards_rank_suit = []
-    if len(bound_rect) >= 2:
-        cards_rank_suit = [
-            (
-                card[
+        if len(bound_rect) >= 2:
+            cards_rank_suit.append((
+                corner[
                     bound_rect[1][1]:bound_rect[1][1]+bound_rect[1][3],
                     bound_rect[1][0]:bound_rect[1][0]+bound_rect[1][2]
                     ],
-                card[
+                corner[
                     bound_rect[0][1]:bound_rect[0][1]+bound_rect[0][3],
                     bound_rect[0][0]:bound_rect[0][0]+bound_rect[0][2]
                 ]
-            )
-            for card in card_corners
-        ]
-
-    for rank, suit in cards_rank_suit:
-        cv2.imshow("Rank", rank)
-        cv2.imshow("Suit", suit)
+            ))
 
     return cards_rank_suit
 
-def is_red_suit(card_suit) -> bool:
+def is_red_suit(card_suit, threshold: float = 0.33) -> bool:
     # Convert to HSV representation
     hsv = cv2.cvtColor(card_suit, cv2.COLOR_BGR2HSV)
 
     # Red color wraps around in HSV space, so we need two masks
-    mask1 = cv2.inRange(hsv, np.array[0, 70, 50], np.array([10, 255, 255]))
-    mask2 = cv2.inRange(hsv, np.array[170, 70, 50], np.array([180, 255, 255]))
+    mask1 = cv2.inRange(hsv, np.array([0, 70, 50]), np.array([10, 255, 255]))
+    mask2 = cv2.inRange(hsv, np.array([170, 70, 50]), np.array([180, 255, 255]))
 
     mask = mask1 | mask2
 
-    # TODO: finish implementation
-    return False
+    return np.count_nonzero(mask) / mask.size >= threshold
 
 def template_matching(
     frame: Union[GrayscaleImageType, ColourImageType],
@@ -329,13 +320,13 @@ def template_matching(
     w, h = template.shape[::-1]
 
 
-    if  frame.shape[0] < h or frame.shape[1] < w:
-        # frame = cv2.resize(frame, (w, h))
-        old_w, old_h = frame.shape[::-1]
-        x_half_diff = (w - old_w) // 2 + 1 if w > old_w else 0
-        y_half_diff = (h - old_h) // 2 + 1 if h > old_h else 0
-        frame = cv2.copyMakeBorder(frame, top=y_half_diff, bottom=y_half_diff, left=x_half_diff, right=x_half_diff,
-                                    borderType=cv2.BORDER_CONSTANT, value=255)
+    if frame.shape[0] < h or frame.shape[1] < w:
+        frame = cv2.resize(frame, (w, h))
+        # old_w, old_h = frame.shape[::-1]
+        # x_half_diff = (w - old_w) // 2 + 1 if w > old_w else 0
+        # y_half_diff = (h - old_h) // 2 + 1 if h > old_h else 0
+        # frame = cv2.copyMakeBorder(frame, top=y_half_diff, bottom=y_half_diff, left=x_half_diff, right=x_half_diff,
+        #                             borderType=cv2.BORDER_CONSTANT, value=255)
 
     # template match (suit/rank) with frame
     res = cv2.matchTemplate(frame, template, method)
@@ -353,10 +344,10 @@ def template_matching(
         top_left[0]:top_left[0] + h
     ]
 
-    cv2.imshow(f"{temp}FRAME_DEBUG", frame)
-    cv2.imshow(f"{temp}TEMPLATE_DEBUG", template)
-    cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 300, 300 + 300 * (temp != "rank"))
-    cv2.moveWindow(f"{temp}FRAME_DEBUG", 600, 300 + 300 * (temp != "rank"))
+    # cv2.imshow(f"{temp}FRAME_DEBUG", frame)
+    # cv2.imshow(f"{temp}TEMPLATE_DEBUG", template)
+    # cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 300, 300 + 300 * (temp != "rank"))
+    # cv2.moveWindow(f"{temp}FRAME_DEBUG", 600, 300 + 300 * (temp != "rank"))
 
     return match, match_val
 
