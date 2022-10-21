@@ -99,7 +99,10 @@ def run(
         print("Calibration was successful! Saving results...")
 
         camera_matrix = result[0]
+        camera_dist_coeffs = result[1]
+    
         camera_matrix.dump(os.path.join(save_dir, "camera_matrix.numpy"))
+        camera_dist_coeffs.dump(os.path.join(save_dir, "camera_dist_coeffs.numpy"))
 
 
 def parse_args():

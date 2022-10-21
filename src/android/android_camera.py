@@ -26,7 +26,7 @@ class AndroidCamera:
         self.img_size = tuple([int(size) for size in img_size]) if img_size else None
         if self.mode == "usb":
             self.__init_device()
-
+            
     def __init_device(self):
         self.device = cv2.VideoCapture(int(self.cpoint))
 

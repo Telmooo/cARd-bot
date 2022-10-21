@@ -8,6 +8,7 @@ from android.android_camera import AndroidCamera
 import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
+from opengl.render import AR_Render
 from utils.draw import draw_grid
 from utils.image_processing import *
 
@@ -19,6 +20,10 @@ def run(params) -> None:
     camera = AndroidCamera(
         mode=params["mode"], cpoint=args["cpoint"]
     )
+    
+    ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.05)
+    # ar_renderer = AR_Render(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
+    
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
