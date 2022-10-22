@@ -59,7 +59,7 @@ def draw_scores(dst_image, pos: Tuple[int, int], sueca_game: SuecaGame, round_su
 
     # Round suit
     if round_suit:
-        draw_text(f"Round suit: {round_suit.name}", (pos[0], pos[1] + 25))
+        draw_text(f"Suit: {round_suit.name}", (pos[0], pos[1] + 25))
 
     # Team 1 score
     draw_text(f"TEAM 1: {sueca_game.team_points[0]}", (pos[0], pos[1] + 50))

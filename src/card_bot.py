@@ -110,7 +110,8 @@ def run(params) -> None:
                     if len(cards_rank_suit) > 1:
                         error_str = "More than one card on table!"
                     else:
-                        if max_suit_confidence >= params["cards.confidenceThreshold"]:
+                        print(params["config"]["cards.confidenceThreshold"])
+                        if max_suit_confidence >= params["config"]["cards.confidenceThreshold"]:
                             round_suit = max_suit_match
                             error_str = None
                         else:
