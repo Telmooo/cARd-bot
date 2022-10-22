@@ -20,3 +20,4 @@ cards:
   cornerWidth: 42
   cornerHeight: 100
   splitHeight: 50
+  confidenceThreshold: 0.8

@@ -1,9 +1,32 @@
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import List, Optional
 import random
 
-from data.load_dataset import Rank, Suit
+class Rank(Enum):
+    Ace = 1
+    Two = 2
+    Three = 3
+    Four = 4
+    Five = 5
+    Six = 6
+    Seven = 7
+    Eight = 8
+    Nine = 9
+    Ten = 10
+    Queen = 11
+    Jack = 12
+    King = 13
+
+class Suit(Enum):
+    Clubs = "c"
+    Diamonds = "d"
+    Hearts = "h"
+    Spades = "s"
+
+    def is_red(self):
+        return self in {Suit.Hearts, Suit.Diamonds}
 
 @dataclass()
 class Card:

@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Tuple
 
-
 def flatten_dictionary(
     dictionary: Dict[str, Any],
     parent_key: str = "",

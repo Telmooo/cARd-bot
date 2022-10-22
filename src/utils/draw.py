@@ -1,8 +1,9 @@
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 import numpy as np
 import cv2
 
+from data.load_dataset import Suit
 from sueca import SuecaGame
 
 def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tuple[int, int]] = None):
@@ -40,18 +41,15 @@ def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tupl
     
     return grid
 
-def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
-
-    THICKNESS=2
-    COLOR=(85, 135, 0)
-    SCALE=0.6
-
-    
+def draw_scores(dst_image, sueca_game: SuecaGame, round_suit: Suit, pos: Tuple[int, int]):
+    THICKNESS = 2
+    COLOR = (85, 135, 0)
+    SCALE = 0.6
 
     # Team 1 score
     cv2.putText(
         img=dst_image,
-        text=f"Round #{sueca_game.rounds_evaluated+1 if sueca_game.rounds_evaluated < 10 else 10}",
+        text=f"Round #{sueca_game.rounds_evaluated + 1}",
         org=pos,
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
         fontScale=SCALE,
@@ -64,7 +62,7 @@ def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
     cv2.putText(
         img=dst_image,
         text=f"TEAM 1: {sueca_game.team_points[0]}",
-        org=(pos[0], pos[1]+50),
+        org=(pos[0], pos[1] + 50),
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
         fontScale=SCALE,
         color=COLOR,
@@ -76,7 +74,7 @@ def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
     cv2.putText(
         img=dst_image,
         text=f"TEAM 2: {sueca_game.team_points[1]}",
-        org=(pos[0], pos[1]+100),
+        org=(pos[0], pos[1] + 100),
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
         fontScale=SCALE,
         color=COLOR,
@@ -85,7 +83,6 @@ def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
     )
 
 def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
-
     contours = [x[3] for x in card_center_labels]
     contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]
 
@@ -94,7 +91,7 @@ def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tup
     if sueca_game.winner() is not None:
         text = f"TEAM {sueca_game.winner()+1} WINS"
         COLOR = (85, 135, 0)
-    
+
     cv2.putText(
         img=dst_image, 
         text=text,

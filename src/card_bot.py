@@ -9,7 +9,7 @@ import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from opengl.render import AR_Render
-from sueca import Card, SuecaGame, SuecaRound
+from sueca import Card, SuecaGame, SuecaRound, Suit, Rank
 from utils.draw import draw_grid, draw_scores, draw_winner
 from utils.image_processing import *
 
@@ -36,7 +36,6 @@ def run(params) -> None:
 
     print("TRUMP SUIT: ", sueca_game.trump_suit)
 
-
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
     # cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
@@ -47,6 +46,8 @@ def run(params) -> None:
 
     # for suit in dataset_suits.keys():
     #     dataset_suits[suit] = enhance_image(dataset_suits[suit], params["config"])
+
+    round_suit = None
 
     while True:
         try:
@@ -91,11 +92,6 @@ def run(params) -> None:
                 card_suit = cv2.copyMakeBorder(card_suit, top, top, left, left,
                         cv2.BORDER_CONSTANT, None, (255,255,255))
 
-                # cv2.imshow(f"Rank - {idx}", card_rank)
-                # cv2.imshow(f"Suit - {idx}", card_suit)
-                # cv2.moveWindow(f"Rank - {idx}", 100*idx, 0)
-                # cv2.moveWindow(f"Suit - {idx}", 100*idx, 100)
-
                 rank_match: Dict[Rank, Tuple[float, np.ndarray]] = {}
                 for rank, template_rank in dataset_ranks.items():
                     match, match_val = template_matching(card_rank, template_rank, method=cv2.TM_CCORR_NORMED, temp="rank")
@@ -103,8 +99,7 @@ def run(params) -> None:
 
                 suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
-                    # TODO: refactor
-                    if (red and suit in {Suit.Clubs, Suit.Spades}) or (not red and suit in {Suit.Hearts, Suit.Diamonds}):
+                    if red ^ suit.is_red():
                         continue
 
                     match, match_val = template_matching(card_suit, template_suit, method=cv2.TM_CCORR_NORMED, temp="suit")
@@ -113,11 +108,15 @@ def run(params) -> None:
                 max_rank_match = max(rank_match, key=lambda k: rank_match[k][0])
                 max_suit_match = max(suit_match, key=lambda k: suit_match[k][0])
 
-                cards_labels.append(
-                    ((max_rank_match.name,) + rank_match[max_rank_match],
-                     (max_suit_match.name,) + suit_match[max_suit_match]
-                    )
-                )
+                max_suit_confidence = suit_match[max_suit_match][0]
+
+                if round_suit is None and max_suit_confidence >= params["cards.confidenceThreshold"]:
+                    round_suit = max_suit_match
+
+                cards_labels.append((
+                    (max_rank_match.name,) + rank_match[max_rank_match],
+                    (max_suit_match.name,) + suit_match[max_suit_match]
+                ))
 
                 cards_center_label.append((card_centers[idx], max_rank_match, max_suit_match))
 
@@ -125,16 +124,16 @@ def run(params) -> None:
 
             for idx, tup in enumerate(cards_center_label):
                 cards_center_label[idx] = tup + (filtered_contours[idx],)
-                
-            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0]) # sort along x-axis
 
-            if (len(cards_center_label) >= 4):
-                # cards are ordered along x axis -> swap last two (bottom/top middle and rightmost)
+            # Sort along x-axis
+            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0])
+
+            if len(cards_center_label) >= 4:
+                # Cards are sorted along x axis -> swap last two (bottom/top middle and rightmost)
+                # This way we get a list with cards from alternating teams
                 cards_center_label[-1], cards_center_label[-2] = cards_center_label[-2], cards_center_label[-1]
 
-
             if config.DEBUG_MODE:
-
                 debug_frame = orig_frame.copy()
                 cv2.drawContours(debug_frame, filtered_contours, -1, (0, 0, 255), 2)
 
@@ -163,31 +162,24 @@ def run(params) -> None:
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-            if (ar_renderer.is_round_over and not sueca_game.is_finished()):
+            if ar_renderer.is_round_over and not sueca_game.is_finished():
                 ar_renderer.is_round_over = False
 
-                if (sueca_game.rounds_evaluated < 10):
-                    # create card objects from detected cards in the table
-                    cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
-                    sueca_round = SuecaRound(Suit.Hearts, cards) # pick suit based on first card
-
-                    sueca_game.evaluate_round(sueca_round)
+                # Create card objects from detected cards in the table
+                cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
+                # Pick round suit based on first card
+                sueca_round = SuecaRound(round_suit, cards)
+                sueca_game.evaluate_round(sueca_round)
 
             if sueca_game.is_finished():
-                ar_renderer.display_obj = True # display trophy
+                ar_renderer.display_obj = True # Display trophy
                 draw_winner(orig_frame, sueca_game, cards_center_label,
-                            (ar_renderer.cam_w//2 - 90, ar_renderer.cam_h - ar_renderer.cam_h//5))
+                        (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
             draw_scores(orig_frame, sueca_game,
-                        (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h//10))
-                
-            ar_renderer.set_frame(orig_frame)
-                        
+                    (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10))
 
-            if cards:
-                pass
-                # cv2.imshow("Cards", draw_grid(cards, resize=(1280, 720)))
-                # cv2.imshow("Card corners", draw_grid(card_corners, resize=(960, 540)))
+            ar_renderer.set_frame(orig_frame)
 
             if cv2.waitKey(1) == 27:
                 break
