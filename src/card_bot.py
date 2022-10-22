@@ -57,8 +57,8 @@ def run(params) -> None:
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards = extract_cards(orig_frame, contours, params["config"])
-            if cards:
-                cv2.imshow("Cards", draw_grid(cards))
+            # if cards:
+            #     cv2.imshow("Cards", draw_grid(cards))
 
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
@@ -139,6 +139,8 @@ def run(params) -> None:
                     )
 
                 cv2.imshow("Contours Frame", debug_frame)
+
+                # ar_renderer.set_frame(orig_frame)
 
             # cv2.imshow("Camera Frame", orig_frame)
 
