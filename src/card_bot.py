@@ -8,7 +8,7 @@ from android.android_camera import AndroidCamera
 import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
-from opengl.render import AR_Render
+from opengl.render import ArRenderer
 from sueca import Card, SuecaGame, SuecaRound, Suit, Rank
 from utils.draw import draw_grid, draw_scores, draw_winner
 from utils.image_processing import *
@@ -22,9 +22,8 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
 
-    ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
-    # ar_renderer = AR_Render(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
-
+    ar_renderer = ArRenderer(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
+    # ar_renderer = ArRenderer(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
@@ -48,6 +47,7 @@ def run(params) -> None:
     #     dataset_suits[suit] = enhance_image(dataset_suits[suit], params["config"])
 
     round_suit = None
+    error_str = None
 
     while True:
         try:
@@ -57,16 +57,10 @@ def run(params) -> None:
 
             thresh_frame = binarize(frame, params["config"])
 
-            # if config.DEBUG_MODE:
-            #     cv2.imshow("Binarized Image", thresh_frame)
-
             # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards, card_centers = extract_cards(orig_frame, contours, params["config"])
-
-            # if cards:
-            #     cv2.imshow("Cards", draw_grid(cards))
 
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
@@ -86,11 +80,11 @@ def run(params) -> None:
 
                 top, left = int(0.05 * card_rank.shape[0]), int(0.05 * card_rank.shape[1])
                 card_rank = cv2.copyMakeBorder(card_rank, top, top, left, left,
-                        cv2.BORDER_CONSTANT, None, (255,255,255))
+                        cv2.BORDER_CONSTANT, None, (255, 255, 255))
 
                 top, left = int(0.05 * card_suit.shape[0]), int(0.05 * card_suit.shape[1])
                 card_suit = cv2.copyMakeBorder(card_suit, top, top, left, left,
-                        cv2.BORDER_CONSTANT, None, (255,255,255))
+                        cv2.BORDER_CONSTANT, None, (255, 255, 255))
 
                 rank_match: Dict[Rank, Tuple[float, np.ndarray]] = {}
                 for rank, template_rank in dataset_ranks.items():
@@ -110,8 +104,17 @@ def run(params) -> None:
 
                 max_suit_confidence = suit_match[max_suit_match][0]
 
-                if round_suit is None and max_suit_confidence >= params["cards.confidenceThreshold"]:
-                    round_suit = max_suit_match
+                if ar_renderer.detect_suit:
+                    ar_renderer.detect_suit = False
+
+                    if len(cards_rank_suit) > 1:
+                        error_str = "More than one card on table!"
+                    else:
+                        if max_suit_confidence >= params["cards.confidenceThreshold"]:
+                            round_suit = max_suit_match
+                            error_str = None
+                        else:
+                            error_str = "Not enough confidence to determine suit!"
 
                 cards_labels.append((
                     (max_rank_match.name,) + rank_match[max_rank_match],
@@ -165,19 +168,22 @@ def run(params) -> None:
             if ar_renderer.is_round_over and not sueca_game.is_finished():
                 ar_renderer.is_round_over = False
 
-                # Create card objects from detected cards in the table
-                cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
-                # Pick round suit based on first card
-                sueca_round = SuecaRound(round_suit, cards)
-                sueca_game.evaluate_round(sueca_round)
+                if round_suit:
+                    # Create card objects from detected cards in the table
+                    cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
+                    # Pick round suit based on first card
+                    sueca_round = SuecaRound(round_suit, cards)
+                    sueca_game.evaluate_round(sueca_round)
+
+                    round_suit = None
 
             if sueca_game.is_finished():
                 ar_renderer.display_obj = True # Display trophy
                 draw_winner(orig_frame, sueca_game, cards_center_label,
                         (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
-            draw_scores(orig_frame, sueca_game,
-                    (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10))
+            scores_pos = (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10)
+            draw_scores(orig_frame, scores_pos, sueca_game, round_suit, error_str)
 
             ar_renderer.set_frame(orig_frame)
 
