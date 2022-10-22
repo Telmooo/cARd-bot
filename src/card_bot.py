@@ -9,6 +9,7 @@ import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from opengl.render import AR_Render
+from sueca import Card, SuecaGame, SuecaRound
 from utils.draw import draw_grid
 from utils.image_processing import *
 
@@ -20,10 +21,10 @@ def run(params) -> None:
     camera = AndroidCamera(
         mode=params["mode"], cpoint=args["cpoint"]
     )
-    
+
     ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.05)
     # ar_renderer = AR_Render(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
-    
+
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
@@ -31,14 +32,17 @@ def run(params) -> None:
         load_colour=False
     )
 
+
+    sueca_game = SuecaGame(Suit.Clubs)
+
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
     # cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
     # print("Suit Templates", [key.name for key in dataset_suits.keys()])
-    
+
     # for rank in dataset_ranks.keys():
     #     dataset_ranks[rank] = enhance_image(dataset_ranks[rank], params["config"])
-    
+
     # for suit in dataset_suits.keys():
     #     dataset_suits[suit] = enhance_image(dataset_suits[suit], params["config"])
 
@@ -56,13 +60,15 @@ def run(params) -> None:
             # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
-            cards = extract_cards(orig_frame, contours, params["config"])
+            cards, card_centers = extract_cards(orig_frame, contours, params["config"])
+
             # if cards:
             #     cv2.imshow("Cards", draw_grid(cards))
 
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
             cards_labels = []
+            cards_center_label = []
             for idx, (card_rank, card_suit) in enumerate(cards_rank_suit):
                 red = is_red_suit(card_suit)
 
@@ -76,7 +82,7 @@ def run(params) -> None:
                 card_suit = binarize_rank_suit(card_suit)
 
                 top, left = int(0.05 * card_rank.shape[0]), int(0.05 * card_rank.shape[1])
-                card_rank = cv2.copyMakeBorder(card_rank, top, top, left, left, 
+                card_rank = cv2.copyMakeBorder(card_rank, top, top, left, left,
                         cv2.BORDER_CONSTANT, None, (255,255,255))
 
                 top, left = int(0.05 * card_suit.shape[0]), int(0.05 * card_suit.shape[1])
@@ -111,9 +117,14 @@ def run(params) -> None:
                     )
                 )
 
+                cards_center_label.append((card_centers[idx], max_rank_match, max_suit_match))
+
+            filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
+
+            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0]+x[0][1]) # sort clock-wise (l - t - r - b)
+
             if config.DEBUG_MODE:
                 debug_frame = orig_frame.copy()
-                filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
                 cv2.drawContours(debug_frame, filtered_contours, -1, (0, 0, 255), 2)
 
                 for idx, label in enumerate(cards_labels):
@@ -127,20 +138,32 @@ def run(params) -> None:
                         thickness=2,
                         lineType=cv2.LINE_AA
                     )
-                    cv2.putText(
-                        img=debug_frame,
-                        text=f"CONFIDENCE={label[0][1]:.3f} | {label[1][1]:.3f}",
-                        org=(filtered_contours[idx][0][0] - np.array([-50, 0])),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(85, 135, 0),
-                        thickness=2,
-                        lineType=cv2.LINE_AA
-                    )
+                    cv2.circle(debug_frame, np.int32(card_centers[idx]), 3, (255, 255, 0), 1)
+                    # cv2.putText(
+                    #     img=debug_frame,
+                    #     text=f"CONFIDENCE={label[0][1]:.3f} | {label[1][1]:.3f}",
+                    #     org=(filtered_contours[idx][0][0] - np.array([-50, 0])),
+                    #     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    #     fontScale=0.5,
+                    #     color=(85, 135, 0),
+                    #     thickness=2,
+                    #     lineType=cv2.LINE_AA
+                    # )
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-                # ar_renderer.set_frame(orig_frame)
+                ar_renderer.set_frame(orig_frame)
+
+                if (ar_renderer.is_round_over):
+                    cards = [Card(rank, suit) for (_, rank, suit) in cards_center_label]
+                    sueca_round = SuecaRound(Suit.Hearts, cards) # pick suit based on first card
+
+                    sueca_game.evaluate_round(sueca_round)
+
+                    if sueca_game.is_finished():
+                        ar_renderer.display_obj = True
+                    
+                    ar_renderer.is_round_over = False
 
             # cv2.imshow("Camera Frame", orig_frame)
 

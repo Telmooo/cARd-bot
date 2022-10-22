@@ -11,6 +11,8 @@ import cv2.aruco as aruco
 from PIL import Image
 import numpy as np
 
+from sueca import SuecaRound, Suit
+
 from opengl.objloader import * #Load obj and corresponding material and textures.
 from opengl.matrixTrans import *
 
@@ -55,6 +57,10 @@ class AR_Render:
         
         self.filter = Filter()
         self.image = None
+
+        self.is_round_over = False
+
+        self.display_obj = False
         
 
     def loadModel(self, object_path):
@@ -168,6 +174,10 @@ class AR_Render:
         Keyword Arguments:
             mark_size {float} -- [aruco mark size: unit is meter] (default: {0.07})
         """
+
+        if not self.display_obj:
+            return
+
         # aruco data
         aruco_dict = aruco.Dictionary_get(aruco.DICT_ARUCO_ORIGINAL)      
         parameters =  aruco.DetectorParameters_create()
@@ -230,7 +240,12 @@ class AR_Render:
             glutDestroyWindow(self.window_id)
             glutMainLoopEvent()
             exit(0)
+        elif key == b' ': # end round
+            self.is_round_over = True
+        elif key == b't': # show trophy
+            self.display_obj = not self.display_obj
 
+        print(key)
                 
     def run(self):
         glutMainLoop()

@@ -163,11 +163,13 @@ def get_quadrilateral_ord_corners(contour):
 
     out_pts = np.float32([pairs]).reshape(-1, 1, 2)
 
-    return out_pts
+    return out_pts, card_center
 
 
 def contour_filter(contour, params, eps=1e-6):
-    if len(contour) != 4:
+    # if len(contour) != 4:
+    #     return False
+    if contour.shape[0] > 4 and contour.shape[1] != 1:
         return False
 
     # corners = get_quadrilateral_ord_corners(contour)
@@ -225,8 +227,9 @@ def extract_cards(image, contours, params):
     cards = []
     debug_img = np.zeros_like(image)
     COLOURS = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]
+    center_pts = []
     for contour in filtered_contours:
-        src_pts = get_quadrilateral_ord_corners(contour)
+        src_pts, center_pt = get_quadrilateral_ord_corners(contour)
 
         for idx, corner in enumerate(src_pts):
             cv2.circle(debug_img, np.int32(corner[0]), 5, COLOURS[idx], 2)
@@ -238,9 +241,10 @@ def extract_cards(image, contours, params):
         # card = cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
         # card = enhance_image(card, params)
         cards.append(card)
+        center_pts.append(center_pt)
 
     # cv2.imshow("Corner Order", debug_img)
-    return cards
+    return cards, center_pts
 
 def extract_card_corners(cards, params):
     card_corners = [
