@@ -10,7 +10,7 @@ from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from opengl.render import AR_Render
 from sueca import Card, SuecaGame, SuecaRound
-from utils.draw import draw_grid
+from utils.draw import draw_grid, draw_scores
 from utils.image_processing import *
 
 def run(params) -> None:
@@ -22,7 +22,7 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
 
-    ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.05)
+    ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
     # ar_renderer = AR_Render(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
 
 
@@ -31,7 +31,6 @@ def run(params) -> None:
         suits_dir=os.path.join(params["config"]["cards.dataset"], "./suits"),
         load_colour=False
     )
-
 
     sueca_game = SuecaGame(Suit.Clubs)
 
@@ -152,19 +151,35 @@ def run(params) -> None:
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-                ar_renderer.set_frame(orig_frame)
-
                 if (ar_renderer.is_round_over):
+                    ar_renderer.is_round_over = False
+
+                    # create card objects from detected cards in the table
                     cards = [Card(rank, suit) for (_, rank, suit) in cards_center_label]
                     sueca_round = SuecaRound(Suit.Hearts, cards) # pick suit based on first card
 
                     sueca_game.evaluate_round(sueca_round)
 
-                    if sueca_game.is_finished():
-                        ar_renderer.display_obj = True
-                    
-                    ar_renderer.is_round_over = False
+                if sueca_game.is_finished():
+                    ar_renderer.display_obj = True # display trophy
 
+                    cv2.putText(
+                        img=orig_frame, 
+                        text=f"TEAM {sueca_game.winner()+1} WINS" if not sueca_game.is_tied() else "TIE",
+                        org=(ar_renderer.cam_w//2 - 90, ar_renderer.cam_h - ar_renderer.cam_h//5),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.8,
+                        color=(20, 200, 20),
+                        thickness=4,
+                        lineType=cv2.LINE_AA
+                    )
+
+                # team 1
+                draw_scores(orig_frame, sueca_game, 
+                            (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h//10))
+                    
+                ar_renderer.set_frame(orig_frame)
+                        
             # cv2.imshow("Camera Frame", orig_frame)
 
             if cards:

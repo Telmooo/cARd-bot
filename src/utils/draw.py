@@ -1,7 +1,9 @@
 
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import cv2
+
+from sueca import SuecaGame
 
 def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tuple[int, int]] = None):
     if not images:
@@ -37,3 +39,45 @@ def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tupl
         grid = cv2.resize(grid, resize)
     
     return grid
+
+def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
+
+    THICKNESS=2
+    COLOR=(85, 135, 0)
+    SCALE=0.6
+
+    # Team 1 score
+    cv2.putText(
+        img=dst_image,
+        text=f"Round #{sueca_game.rounds_evaluated}",
+        org=pos,
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=SCALE,
+        color=COLOR,
+        thickness=THICKNESS,
+        lineType=cv2.LINE_AA
+    )
+
+    # Team 1 score
+    cv2.putText(
+        img=dst_image,
+        text=f"TEAM 1: {sueca_game.team_points[0]}",
+        org=(pos[0], pos[1]+50),
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=SCALE,
+        color=COLOR,
+        thickness=THICKNESS,
+        lineType=cv2.LINE_AA
+    )
+
+    # Team 2 score
+    cv2.putText(
+        img=dst_image,
+        text=f"TEAM 2: {sueca_game.team_points[1]}",
+        org=(pos[0], pos[1]+100),
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=SCALE,
+        color=COLOR,
+        thickness=THICKNESS,
+        lineType=cv2.LINE_AA
+    )

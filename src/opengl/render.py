@@ -245,7 +245,7 @@ class AR_Render:
         elif key == b't': # show trophy
             self.display_obj = not self.display_obj
 
-        print(key)
+        # print(key)
                 
     def run(self):
         glutMainLoop()

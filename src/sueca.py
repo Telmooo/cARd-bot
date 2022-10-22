@@ -51,6 +51,6 @@ class SuecaGame:
         return self.team_points[0] == self.team_points[1]
 
     def winner(self) -> Optional[int]:
-        if not self.finished() or self.is_tied():
+        if not self.is_finished() or self.is_tied():
             return None
         return self.team_points.index(max(self.team_points))
