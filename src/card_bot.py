@@ -10,7 +10,7 @@ from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from opengl.render import AR_Render
 from sueca import Card, SuecaGame, SuecaRound
-from utils.draw import draw_grid, draw_scores
+from utils.draw import draw_grid, draw_scores, draw_winner
 from utils.image_processing import *
 
 def run(params) -> None:
@@ -32,7 +32,10 @@ def run(params) -> None:
         load_colour=False
     )
 
-    sueca_game = SuecaGame(Suit.Clubs)
+    sueca_game = SuecaGame()
+
+    print("TRUMP SUIT: ", sueca_game.trump_suit)
+
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
@@ -120,9 +123,18 @@ def run(params) -> None:
 
             filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
 
-            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0]+x[0][1]) # sort clock-wise (l - t - r - b)
+            for idx, tup in enumerate(cards_center_label):
+                cards_center_label[idx] = tup + (filtered_contours[idx],)
+                
+            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0]) # sort along x-axis
+
+            if (len(cards_center_label) >= 4):
+                # cards are ordered along x axis -> swap last two (bottom/top middle and rightmost)
+                cards_center_label[-1], cards_center_label[-2] = cards_center_label[-2], cards_center_label[-1]
+
 
             if config.DEBUG_MODE:
+
                 debug_frame = orig_frame.copy()
                 cv2.drawContours(debug_frame, filtered_contours, -1, (0, 0, 255), 2)
 
@@ -138,49 +150,39 @@ def run(params) -> None:
                         lineType=cv2.LINE_AA
                     )
                     cv2.circle(debug_frame, np.int32(card_centers[idx]), 3, (255, 255, 0), 1)
-                    # cv2.putText(
-                    #     img=debug_frame,
-                    #     text=f"CONFIDENCE={label[0][1]:.3f} | {label[1][1]:.3f}",
-                    #     org=(filtered_contours[idx][0][0] - np.array([-50, 0])),
-                    #     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    #     fontScale=0.5,
-                    #     color=(85, 135, 0),
-                    #     thickness=2,
-                    #     lineType=cv2.LINE_AA
-                    # )
+                    cv2.putText(
+                        img=debug_frame,
+                        text=f"CONFIDENCE={label[0][1]:.3f} | {label[1][1]:.3f}",
+                        org=(filtered_contours[idx][0][0] - np.array([-50, 0])),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.5,
+                        color=(85, 135, 0),
+                        thickness=2,
+                        lineType=cv2.LINE_AA
+                    )
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-                if (ar_renderer.is_round_over):
-                    ar_renderer.is_round_over = False
+            if (ar_renderer.is_round_over and not sueca_game.is_finished()):
+                ar_renderer.is_round_over = False
 
+                if (sueca_game.rounds_evaluated < 10):
                     # create card objects from detected cards in the table
-                    cards = [Card(rank, suit) for (_, rank, suit) in cards_center_label]
+                    cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
                     sueca_round = SuecaRound(Suit.Hearts, cards) # pick suit based on first card
 
                     sueca_game.evaluate_round(sueca_round)
 
-                if sueca_game.is_finished():
-                    ar_renderer.display_obj = True # display trophy
+            if sueca_game.is_finished():
+                ar_renderer.display_obj = True # display trophy
+                draw_winner(orig_frame, sueca_game, cards_center_label,
+                            (ar_renderer.cam_w//2 - 90, ar_renderer.cam_h - ar_renderer.cam_h//5))
 
-                    cv2.putText(
-                        img=orig_frame, 
-                        text=f"TEAM {sueca_game.winner()+1} WINS" if not sueca_game.is_tied() else "TIE",
-                        org=(ar_renderer.cam_w//2 - 90, ar_renderer.cam_h - ar_renderer.cam_h//5),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.8,
-                        color=(20, 200, 20),
-                        thickness=4,
-                        lineType=cv2.LINE_AA
-                    )
-
-                # team 1
-                draw_scores(orig_frame, sueca_game, 
-                            (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h//10))
-                    
-                ar_renderer.set_frame(orig_frame)
+            draw_scores(orig_frame, sueca_game,
+                        (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h//10))
+                
+            ar_renderer.set_frame(orig_frame)
                         
-            # cv2.imshow("Camera Frame", orig_frame)
 
             if cards:
                 pass

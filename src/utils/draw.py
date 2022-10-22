@@ -46,10 +46,12 @@ def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
     COLOR=(85, 135, 0)
     SCALE=0.6
 
+    
+
     # Team 1 score
     cv2.putText(
         img=dst_image,
-        text=f"Round #{sueca_game.rounds_evaluated}",
+        text=f"Round #{sueca_game.rounds_evaluated+1 if sueca_game.rounds_evaluated < 10 else 10}",
         org=pos,
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
         fontScale=SCALE,
@@ -81,3 +83,27 @@ def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
         thickness=THICKNESS,
         lineType=cv2.LINE_AA
     )
+
+def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
+
+    contours = [x[3] for x in card_center_labels]
+    contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]
+
+    text = "TIE"
+    COLOR = (0, 0, 255)
+    if sueca_game.winner() is not None:
+        text = f"TEAM {sueca_game.winner()+1} WINS"
+        COLOR = (85, 135, 0)
+    
+    cv2.putText(
+        img=dst_image, 
+        text=text,
+        org=pos,
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=0.8,
+        color=COLOR,
+        thickness=4,
+        lineType=cv2.LINE_AA
+    )
+
+    cv2.drawContours(dst_image, contours, -1, (0, 255, 255), 2)

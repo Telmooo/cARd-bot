@@ -225,14 +225,14 @@ def extract_cards(image, contours, params):
     ]).reshape(-1, 1, 2)
 
     cards = []
-    debug_img = np.zeros_like(image)
-    COLOURS = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]
+    # debug_img = np.zeros_like(image)
+    # COLOURS = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]
     center_pts = []
     for contour in filtered_contours:
         src_pts, center_pt = get_quadrilateral_ord_corners(contour)
 
-        for idx, corner in enumerate(src_pts):
-            cv2.circle(debug_img, np.int32(corner[0]), 5, COLOURS[idx], 2)
+        # for idx, corner in enumerate(src_pts):
+        #     cv2.circle(debug_img, np.int32(corner[0]), 5, COLOURS[idx], 2)
 
         # M = cv2.perspectiveTransform(src_pts, target_pts)
         M, _mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)

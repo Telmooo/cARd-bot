@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass
 from typing import List, Optional
+import random
 
 from data.load_dataset import Rank, Suit
 
@@ -25,7 +26,8 @@ class SuecaRound:
     def winner(self, trump_suit: Suit) -> int:
         best_card = max(
             self.cards,
-            key=lambda c: SuecaRound.points_by_rank[c.rank] + 100 if c.suit == trump_suit else 0
+            key=lambda c: (0 if c.suit != self.suit and c.suit != trump_suit else
+                SuecaRound.points_by_rank.get(c.rank, 0) + 100 * (c.suit == trump_suit))
         )
         return self.cards.index(best_card) % 2
 
@@ -35,8 +37,8 @@ class SuecaRound:
 class SuecaGame:
     NUM_ROUNDS = 10
 
-    def __init__(self, trump_suit: Suit) -> None:
-        self.trump_suit = trump_suit
+    def __init__(self, trump_suit: Suit = None) -> None:
+        self.trump_suit = random.choice(list(Suit))
         self.team_points = [0, 0]
         self.rounds_evaluated = 0
 
