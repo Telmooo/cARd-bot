@@ -1,20 +1,21 @@
+
 import argparse
 import os
 from typing import Dict, Tuple
+
 import cv2
 import numpy as np
+from opengl.render import ArRenderer
 
 from android.android_camera import AndroidCamera
 import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
-from opengl.render import ArRenderer
 from sueca import Card, SuecaGame, SuecaRound, Suit, Rank
 from utils.draw import draw_grid, draw_scores, draw_winner
 from utils.image_processing import *
 
 def run(params) -> None:
-
     if params["debug"]:
         config.DEBUG_MODE = True
 
@@ -31,20 +32,12 @@ def run(params) -> None:
         load_colour=False
     )
 
-    sueca_game = SuecaGame()
-
-    print("TRUMP SUIT: ", sueca_game.trump_suit)
+    game = SuecaGame()
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
     # cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
     # print("Suit Templates", [key.name for key in dataset_suits.keys()])
-
-    # for rank in dataset_ranks.keys():
-    #     dataset_ranks[rank] = enhance_image(dataset_ranks[rank], params["config"])
-
-    # for suit in dataset_suits.keys():
-    #     dataset_suits[suit] = enhance_image(dataset_suits[suit], params["config"])
 
     round_suit = None
     error_str = None
@@ -110,7 +103,6 @@ def run(params) -> None:
                     if len(cards_rank_suit) > 1:
                         error_str = "More than one card on table!"
                     else:
-                        print(params["config"]["cards.confidenceThreshold"])
                         if max_suit_confidence >= params["config"]["cards.confidenceThreshold"]:
                             round_suit = max_suit_match
                             error_str = None
@@ -166,7 +158,7 @@ def run(params) -> None:
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-            if ar_renderer.is_round_over and not sueca_game.is_finished():
+            if ar_renderer.is_round_over and not game.is_finished():
                 ar_renderer.is_round_over = False
 
                 if round_suit:
@@ -174,17 +166,17 @@ def run(params) -> None:
                     cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
                     # Pick round suit based on first card
                     sueca_round = SuecaRound(round_suit, cards)
-                    sueca_game.evaluate_round(sueca_round)
+                    game.evaluate_round(sueca_round)
 
                     round_suit = None
 
-            if sueca_game.is_finished():
+            if game.is_finished():
                 ar_renderer.display_obj = True # Display trophy
-                draw_winner(orig_frame, sueca_game, cards_center_label,
+                draw_winner(orig_frame, game, cards_center_label,
                         (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
             scores_pos = (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10)
-            draw_scores(orig_frame, scores_pos, sueca_game, round_suit, error_str)
+            draw_scores(orig_frame, scores_pos, game, round_suit, error_str)
 
             ar_renderer.set_frame(orig_frame)
 
