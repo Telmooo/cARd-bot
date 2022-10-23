@@ -58,7 +58,6 @@ def run(
     save_frames: bool = False,
     debug: bool = False
 ) -> None:
-
     camera = AndroidCamera(mode=mode, cpoint=cpoint)
 
     saved_frames: List[np.ndarray] = []
@@ -120,7 +119,7 @@ def parse_args():
     parser.add_argument(
         "--chess-shape",
         nargs=3, metavar=("ROWS", "COLS", "MM"), default=(6, 9, 20),
-        help="chessboard size, rows and columns, and size of square in milimeters. E.g. (ROWS, COLS, MM)"
+        help="chessboard size, rows and columns, and size of each square in milimeters. E.g. (ROWS, COLS, MM)"
     )
     parser.add_argument(
         "--save-frames",

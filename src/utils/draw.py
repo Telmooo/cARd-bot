@@ -1,8 +1,9 @@
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 import numpy as np
 import cv2
 
+from data.load_dataset import Suit
 from sueca import SuecaGame
 
 def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tuple[int, int]] = None):
@@ -40,52 +41,36 @@ def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tupl
     
     return grid
 
-def draw_scores(dst_image, sueca_game : SuecaGame, pos : Tuple[int, int]):
+def draw_scores(dst_image, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Suit, error_str: str):
+    def draw_text(text: str, pos: Tuple[int, int], color = (85, 135, 0)):
+        cv2.putText(
+            img=dst_image,
+            text=text,
+            org=pos,
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=0.6,
+            color=color,
+            thickness=2,
+            lineType=cv2.LINE_AA
+        )
 
-    THICKNESS=2
-    COLOR=(85, 135, 0)
-    SCALE=0.6
+    # Round number
+    draw_text(f"Round #{sueca_game.rounds_evaluated + 1}", pos)
 
-    
+    # Round suit
+    if round_suit:
+        draw_text(f"Suit: {round_suit.name}", (pos[0], pos[1] + 25))
 
     # Team 1 score
-    cv2.putText(
-        img=dst_image,
-        text=f"Round #{sueca_game.rounds_evaluated+1 if sueca_game.rounds_evaluated < 10 else 10}",
-        org=pos,
-        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        fontScale=SCALE,
-        color=COLOR,
-        thickness=THICKNESS,
-        lineType=cv2.LINE_AA
-    )
-
-    # Team 1 score
-    cv2.putText(
-        img=dst_image,
-        text=f"TEAM 1: {sueca_game.team_points[0]}",
-        org=(pos[0], pos[1]+50),
-        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        fontScale=SCALE,
-        color=COLOR,
-        thickness=THICKNESS,
-        lineType=cv2.LINE_AA
-    )
+    draw_text(f"TEAM 1: {sueca_game.team_points[0]}", (pos[0], pos[1] + 50))
 
     # Team 2 score
-    cv2.putText(
-        img=dst_image,
-        text=f"TEAM 2: {sueca_game.team_points[1]}",
-        org=(pos[0], pos[1]+100),
-        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        fontScale=SCALE,
-        color=COLOR,
-        thickness=THICKNESS,
-        lineType=cv2.LINE_AA
-    )
+    draw_text(f"TEAM 2: {sueca_game.team_points[1]}", (pos[0], pos[1] + 75))
+
+    if error_str:
+        draw_text(error_str, (pos[0], pos[1] + 100), (50, 50, 230))
 
 def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
-
     contours = [x[3] for x in card_center_labels]
     contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]
 
@@ -94,7 +79,7 @@ def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tup
     if sueca_game.winner() is not None:
         text = f"TEAM {sueca_game.winner()+1} WINS"
         COLOR = (85, 135, 0)
-    
+
     cv2.putText(
         img=dst_image, 
         text=text,

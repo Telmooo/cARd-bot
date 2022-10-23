@@ -1,20 +1,21 @@
+
 import argparse
 import os
 from typing import Dict, Tuple
+
 import cv2
 import numpy as np
+from opengl.render import ArRenderer
 
 from android.android_camera import AndroidCamera
 import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
-from opengl.render import AR_Render
-from sueca import Card, SuecaGame, SuecaRound
+from sueca import Card, SuecaGame, SuecaRound, Suit, Rank
 from utils.draw import draw_grid, draw_scores, draw_winner
 from utils.image_processing import *
 
 def run(params) -> None:
-
     if params["debug"]:
         config.DEBUG_MODE = True
 
@@ -22,9 +23,8 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
 
-    ar_renderer = AR_Render(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
-    # ar_renderer = AR_Render(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
-
+    ar_renderer = ArRenderer(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
+    # ar_renderer = ArRenderer(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
@@ -32,21 +32,15 @@ def run(params) -> None:
         load_colour=False
     )
 
-    sueca_game = SuecaGame()
-
-    print("TRUMP SUIT: ", sueca_game.trump_suit)
-
+    game = SuecaGame()
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
     # cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
     # print("Suit Templates", [key.name for key in dataset_suits.keys()])
 
-    # for rank in dataset_ranks.keys():
-    #     dataset_ranks[rank] = enhance_image(dataset_ranks[rank], params["config"])
-
-    # for suit in dataset_suits.keys():
-    #     dataset_suits[suit] = enhance_image(dataset_suits[suit], params["config"])
+    round_suit = None
+    error_str = None
 
     while True:
         try:
@@ -56,16 +50,10 @@ def run(params) -> None:
 
             thresh_frame = binarize(frame, params["config"])
 
-            # if config.DEBUG_MODE:
-            #     cv2.imshow("Binarized Image", thresh_frame)
-
             # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards, card_centers = extract_cards(orig_frame, contours, params["config"])
-
-            # if cards:
-            #     cv2.imshow("Cards", draw_grid(cards))
 
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
@@ -85,16 +73,11 @@ def run(params) -> None:
 
                 top, left = int(0.05 * card_rank.shape[0]), int(0.05 * card_rank.shape[1])
                 card_rank = cv2.copyMakeBorder(card_rank, top, top, left, left,
-                        cv2.BORDER_CONSTANT, None, (255,255,255))
+                        cv2.BORDER_CONSTANT, None, (255, 255, 255))
 
                 top, left = int(0.05 * card_suit.shape[0]), int(0.05 * card_suit.shape[1])
                 card_suit = cv2.copyMakeBorder(card_suit, top, top, left, left,
-                        cv2.BORDER_CONSTANT, None, (255,255,255))
-
-                # cv2.imshow(f"Rank - {idx}", card_rank)
-                # cv2.imshow(f"Suit - {idx}", card_suit)
-                # cv2.moveWindow(f"Rank - {idx}", 100*idx, 0)
-                # cv2.moveWindow(f"Suit - {idx}", 100*idx, 100)
+                        cv2.BORDER_CONSTANT, None, (255, 255, 255))
 
                 rank_match: Dict[Rank, Tuple[float, np.ndarray]] = {}
                 for rank, template_rank in dataset_ranks.items():
@@ -103,8 +86,7 @@ def run(params) -> None:
 
                 suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
-                    # TODO: refactor
-                    if (red and suit in {Suit.Clubs, Suit.Spades}) or (not red and suit in {Suit.Hearts, Suit.Diamonds}):
+                    if red ^ suit.is_red():
                         continue
 
                     match, match_val = template_matching(card_suit, template_suit, method=cv2.TM_CCORR_NORMED, temp="suit")
@@ -113,11 +95,24 @@ def run(params) -> None:
                 max_rank_match = max(rank_match, key=lambda k: rank_match[k][0])
                 max_suit_match = max(suit_match, key=lambda k: suit_match[k][0])
 
-                cards_labels.append(
-                    ((max_rank_match.name,) + rank_match[max_rank_match],
-                     (max_suit_match.name,) + suit_match[max_suit_match]
-                    )
-                )
+                max_suit_confidence = suit_match[max_suit_match][0]
+
+                if ar_renderer.detect_suit:
+                    ar_renderer.detect_suit = False
+
+                    if len(cards_rank_suit) > 1:
+                        error_str = "More than one card on table!"
+                    else:
+                        if max_suit_confidence >= params["config"]["cards.confidenceThreshold"]:
+                            round_suit = max_suit_match
+                            error_str = None
+                        else:
+                            error_str = "Not enough confidence to determine suit!"
+
+                cards_labels.append((
+                    (max_rank_match.name,) + rank_match[max_rank_match],
+                    (max_suit_match.name,) + suit_match[max_suit_match]
+                ))
 
                 cards_center_label.append((card_centers[idx], max_rank_match, max_suit_match))
 
@@ -125,16 +120,16 @@ def run(params) -> None:
 
             for idx, tup in enumerate(cards_center_label):
                 cards_center_label[idx] = tup + (filtered_contours[idx],)
-                
-            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0]) # sort along x-axis
 
-            if (len(cards_center_label) >= 4):
-                # cards are ordered along x axis -> swap last two (bottom/top middle and rightmost)
+            # Sort along x-axis
+            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0])
+
+            if len(cards_center_label) >= 4:
+                # Cards are sorted along x axis -> swap last two (bottom/top middle and rightmost)
+                # This way we get a list with cards from alternating teams
                 cards_center_label[-1], cards_center_label[-2] = cards_center_label[-2], cards_center_label[-1]
 
-
             if config.DEBUG_MODE:
-
                 debug_frame = orig_frame.copy()
                 cv2.drawContours(debug_frame, filtered_contours, -1, (0, 0, 255), 2)
 
@@ -163,31 +158,27 @@ def run(params) -> None:
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-            if (ar_renderer.is_round_over and not sueca_game.is_finished()):
+            if ar_renderer.is_round_over and not game.is_finished():
                 ar_renderer.is_round_over = False
 
-                if (sueca_game.rounds_evaluated < 10):
-                    # create card objects from detected cards in the table
+                if round_suit:
+                    # Create card objects from detected cards in the table
                     cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
-                    sueca_round = SuecaRound(Suit.Hearts, cards) # pick suit based on first card
+                    # Pick round suit based on first card
+                    sueca_round = SuecaRound(round_suit, cards)
+                    game.evaluate_round(sueca_round)
 
-                    sueca_game.evaluate_round(sueca_round)
+                    round_suit = None
 
-            if sueca_game.is_finished():
-                ar_renderer.display_obj = True # display trophy
-                draw_winner(orig_frame, sueca_game, cards_center_label,
-                            (ar_renderer.cam_w//2 - 90, ar_renderer.cam_h - ar_renderer.cam_h//5))
+            if game.is_finished():
+                ar_renderer.display_obj = True # Display trophy
+                draw_winner(orig_frame, game, cards_center_label,
+                        (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
-            draw_scores(orig_frame, sueca_game,
-                        (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h//10))
-                
+            scores_pos = (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10)
+            draw_scores(orig_frame, scores_pos, game, round_suit, error_str)
+
             ar_renderer.set_frame(orig_frame)
-                        
-
-            if cards:
-                pass
-                # cv2.imshow("Cards", draw_grid(cards, resize=(1280, 720)))
-                # cv2.imshow("Card corners", draw_grid(card_corners, resize=(960, 540)))
 
             if cv2.waitKey(1) == 27:
                 break

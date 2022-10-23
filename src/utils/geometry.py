@@ -104,5 +104,5 @@ def angle_quadrant(angle: float) -> Quadrants:
         return Quadrants.FIRST
     if angle >= -np.pi / 2:
         return Quadrants.FOURTH
-    
+
     return Quadrants.THIRD

@@ -35,13 +35,11 @@ class Filter:
         self.pre_trans_x, self.pre_trans_y, self.pre_trans_z = trans_x, trans_y, trans_z
         return is_mark_move
 
-class AR_Render:
-    
-    def __init__(self, camera : AndroidCamera, obj_path : str, obj_scale=0.02) -> None:
-
+class ArRenderer:
+    def __init__(self, camera: AndroidCamera, obj_path: str, obj_scale = 0.02) -> None:
         self.camera_matrix = np.load("camera_matrix.numpy", allow_pickle=True)
         self.dist_coeffs = np.load("camera_dist_coeffs.numpy", allow_pickle=True)
-            
+
         self.device = camera.device
         self.cam_w, self.cam_h = map(int, (camera.device.get(3), camera.device.get(4)))  
         self.initOpengl(self.cam_w, self.cam_h)  
@@ -50,7 +48,7 @@ class AR_Render:
         self.projectMatrix = intrinsic2Project(self.camera_matrix, self.cam_w, self.cam_h, 0.01, 100.0)      
         self.obj_file = Path(obj_path)        
         self.loadModel(obj_path)
-    
+
         # Model translate that you can adjust by key board 'w', 's', 'a', 'd'
         self.translate_x, self.translate_y, self.translate_z = 0, 0, 0
         self.pre_extrinsicMatrix = None
@@ -59,12 +57,12 @@ class AR_Render:
         self.image = None
 
         self.is_round_over = False
+        self.detect_suit = False
 
         self.display_obj = False
-        
+
 
     def loadModel(self, object_path):
-        
         """[loadModel from object_path]
         
         Arguments:
@@ -72,7 +70,6 @@ class AR_Render:
         """
         
         self.model = OBJ(object_path, swapyz = True)
-
   
     def initOpengl(self, width, height, pos_x = 500, pos_y = 500, window_name = b'Aruco Demo'):
         
@@ -112,9 +109,7 @@ class AR_Render:
         glLightfv(GL_LIGHT0, GL_AMBIENT, (0, 0, 0, 0.1))
         glLightfv(GL_LIGHT0, GL_SPECULAR, (0.2, 0.2, 0.2, 0.5))
         glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.1,0.1,0.1,0.5)) 
-        
-    
- 
+
     def draw_scene(self):
         """[Opengl render loop]
         """
@@ -123,8 +118,7 @@ class AR_Render:
             # glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             self.draw_objects(self.image, mark_size = 0.06) # draw the 3D objects.
             glutSwapBuffers()
-    
- 
+
     def draw_background(self, image):
         """[Draw the background and tranform to opengl format]
         
@@ -162,8 +156,6 @@ class AR_Render:
         glEnd()
 
         glBindTexture(GL_TEXTURE_2D, 0)
- 
- 
  
     def draw_objects(self, image, mark_size = 0.05):
         """[draw models with opengl]
@@ -227,7 +219,7 @@ class AR_Render:
             glDisable(GL_COLOR_MATERIAL)
                 
             cv2.waitKey(20)
-    
+
     def set_frame(self, frame):
         self.image = frame
 
@@ -240,12 +232,12 @@ class AR_Render:
             glutDestroyWindow(self.window_id)
             glutMainLoopEvent()
             exit(0)
-        elif key == b' ': # end round
+        elif key == b' ': # End round
             self.is_round_over = True
-        elif key == b't': # show trophy
+        elif key == b't': # Show trophy
             self.display_obj = not self.display_obj
+        elif key == b's': # Detect suit
+            self.detect_suit = True
 
-        # print(key)
-                
     def run(self):
         glutMainLoop()

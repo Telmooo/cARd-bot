@@ -19,4 +19,5 @@ cards:
   height: 345
   cornerWidth: 50
   cornerHeight: 100
+  confidenceThreshold: 0.55
   # splitHeight: 50

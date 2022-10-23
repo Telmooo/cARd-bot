@@ -1,5 +1,4 @@
 
-
 from typing import Dict
 
 import os
@@ -7,7 +6,6 @@ import argparse
 import re
 from glob import glob
 import cv2
-
 
 RANKS_DIR = "./ranks"
 SUITS_DIR = "./suits"

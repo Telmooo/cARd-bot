@@ -1,31 +1,11 @@
 
-from enum import Enum
 import os
 from typing import Dict, Tuple
 import cv2
 
 import numpy as np
 
-class Rank(Enum):
-    Ace = 1
-    Two = 2
-    Three = 3
-    Four = 4
-    Five = 5
-    Six = 6
-    Seven = 7
-    Eight = 8
-    Nine = 9
-    Ten = 10
-    Queen = 11
-    Jack = 12
-    King = 13
-
-class Suit(Enum):
-    Clubs = "c"
-    Diamonds = "d"
-    Hearts = "h"
-    Spades = "s"
+from sueca import Suit, Rank
 
 def load_split_rank_suit_dataset(
     ranks_dir: str,
