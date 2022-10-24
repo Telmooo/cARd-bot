@@ -23,7 +23,7 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
 
-    ar_renderer = ArRenderer(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
+    ar_renderer = ArRenderer(camera, params["calib_dir"], "./src/opengl/models/LPC/Low_Poly_Cup.obj", 0.03)
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
@@ -136,11 +136,11 @@ def run(params) -> None:
                     cv2.putText(
                         img=debug_frame,
                         text=f"{label[0][0]} of {label[1][0]}",
-                        org=(filtered_contours[idx][0][0] - np.array([-50, 50])),
+                        org=(filtered_contours[idx][0][0] - np.array([-50, 25])),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
                         color=(85, 135, 0),
-                        thickness=2,
+                        thickness=1,
                         lineType=cv2.LINE_AA
                     )
                     cv2.circle(debug_frame, np.int32(card_centers[idx]), 3, (255, 255, 0), 1)
@@ -151,7 +151,7 @@ def run(params) -> None:
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
                         color=(85, 135, 0),
-                        thickness=2,
+                        thickness=1,
                         lineType=cv2.LINE_AA
                     )
 
@@ -161,20 +161,24 @@ def run(params) -> None:
                 ar_renderer.is_round_over = False
 
                 if round_suit:
-                    # Create card objects from detected cards in the table
-                    cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
-                    # Pick round suit based on first card
-                    sueca_round = SuecaRound(round_suit, cards)
-                    game.evaluate_round(sueca_round)
+                    if len(cards_center_label) != 4:
+                        error_str = "Did not detect exactly four cards!"
+                    else:
+                        # Create card objects from detected cards in the table
+                        cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
+                        # Pick round suit based on first card
+                        sueca_round = SuecaRound(round_suit, cards)
+                        game.evaluate_round(sueca_round)
 
-                    round_suit = None
+                        error_str = None
+                        round_suit = None
 
             if game.is_finished():
                 ar_renderer.display_obj = True # Display trophy
                 draw_winner(orig_frame, game, cards_center_label,
                         (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
-            scores_pos = (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10)
+            scores_pos = (25, 25)
             draw_scores(orig_frame, scores_pos, game, round_suit, error_str)
 
             ar_renderer.set_frame(orig_frame)
@@ -197,7 +201,7 @@ def parse_args():
     )
     parser.add_argument(
         "-s", "--trump-suit",
-        required=True, nargs=1, metavar="S", choices=[s.value for s in Suit],
+        required=True, metavar="S", choices=[s.value for s in Suit],
         help="trump suit for the Sueca game (c - Clubs, d - Diamonds, h - Hearts, s - Spades)",
     )
     parser.add_argument(
@@ -209,6 +213,11 @@ def parse_args():
         "--debug",
         action="store_true", default=False,
         help="enable debug mode",
+    )
+    parser.add_argument(
+        "--calib-dir",
+        default="./camera",
+        help="directory containing the camera calibration files",
     )
 
     args = parser.parse_args()

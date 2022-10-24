@@ -42,7 +42,7 @@ def MTL(dir, filename):
 
 # TODO load more format models
 class Obj:
-    def __init__(self, filename, swapyz=False):
+    def __init__(self, filename, swap_yz=False):
         
         self.dir = filename[: filename.rfind('/') + 1]   
                 
@@ -59,12 +59,12 @@ class Obj:
             if not values: continue
             if values[0] == 'v':
                 v = list(map(float, values[1:4]))
-                if swapyz:
+                if swap_yz:
                     v = v[0], v[2], v[1]
                 self.vertices.append(v)
             elif values[0] == 'vn':
                 v = list(map(float, values[1:4]))
-                if swapyz:
+                if swap_yz:
                     v = v[0], v[2], v[1]
                 self.normals.append(v)
             elif values[0] == 'vt':

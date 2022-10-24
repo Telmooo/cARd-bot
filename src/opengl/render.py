@@ -36,18 +36,18 @@ class Filter:
         return is_mark_move
 
 class ArRenderer:
-    def __init__(self, camera: AndroidCamera, obj_path: str, obj_scale: float = 0.02):
-        self.camera_matrix = np.load("camera_matrix.numpy", allow_pickle=True)
-        self.dist_coeffs = np.load("camera_dist_coeffs.numpy", allow_pickle=True)
+    def __init__(self, camera: AndroidCamera, calib_dir: str, obj_path: str, obj_scale: float = 0.02):
+        self.camera_matrix = np.load(os.path.join(calib_dir, "camera_matrix.numpy"), allow_pickle=True)
+        self.dist_coeffs = np.load(os.path.join(calib_dir, "camera_dist_coeffs.numpy"), allow_pickle=True)
 
         self.device = camera.device
         self.cam_w, self.cam_h = map(int, (camera.device.get(3), camera.device.get(4)))  
-        self.initOpengl(self.cam_w, self.cam_h)  
+        self.init_opengl(self.cam_w, self.cam_h)  
         self.model_scale = obj_scale
 
         self.projectMatrix = intrinsic_to_project(self.camera_matrix, self.cam_w, self.cam_h, 0.01, 100.0)      
         self.obj_file = Path(obj_path)        
-        self.loadModel(obj_path)
+        self.load_model(obj_path)
 
         # Model translate that you can adjust by key board 'w', 's', 'a', 'd'
         self.translate_x, self.translate_y, self.translate_z = 0, 0, 0
@@ -62,19 +62,18 @@ class ArRenderer:
         self.display_obj = False
 
 
-    def loadModel(self, object_path):
-        """[loadModel from object_path]
+    def load_model(self, object_path: str):
+        """Load model from object_path
         
         Arguments:
             object_path {[string]} -- [path of model]
         """
-        
-        self.model = Obj(object_path, swapyz = True)
+
+        self.model = Obj(object_path, swap_yz=True)
   
-    def initOpengl(self, width, height, pos_x = 500, pos_y = 500, window_name = b'Aruco Demo'):
-        
-        """[Init opengl configuration]
-        
+    def init_opengl(self, width, height, pos_x = 500, pos_y = 500, window_name = b'Aruco Demo'):
+        """Init OpenGL configuration
+
         Arguments:
             width {[int]} -- [width of opengl viewport]
             height {[int]} -- [height of opengl viewport]

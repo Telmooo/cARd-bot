@@ -127,7 +127,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-data/
-
 camera_dist_coeffs.numpy
 camera_matrix.numpy

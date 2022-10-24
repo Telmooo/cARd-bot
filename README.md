@@ -15,8 +15,10 @@ cd ../../../../
 pip install -r requirements.txt
 ```
 
-**Linux:**
+**Linux (Debian / Ubuntu):**
 ```
+sudo apt-get install freeglut3-dev
+
 pip install -r requirements.txt
 pip install pyopengl
 pip install PyOpenGL-accelerate (optional)

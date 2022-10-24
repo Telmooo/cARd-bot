@@ -50,7 +50,7 @@ def draw_scores(img, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Su
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
             fontScale=0.6,
             color=color,
-            thickness=2,
+            thickness=1,
             lineType=cv2.LINE_AA
         )
 
