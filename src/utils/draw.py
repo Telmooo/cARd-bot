@@ -74,13 +74,10 @@ def draw_scores(img, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Su
         draw_text(error_str, (pos[0], pos[1] + 125), (50, 50, 230))
 
 def draw_winner(img, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
-    contours = [x[3] for x in card_center_labels]
-    contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]
-
     text = "TIE"
     COLOR = (0, 0, 255)
     if sueca_game.winner() is not None:
-        text = f"TEAM {sueca_game.winner()+1} WINS"
+        text = f"TEAM {sueca_game.winner() + 1} WINS"
         COLOR = (85, 135, 0)
 
     cv2.putText(
@@ -93,5 +90,3 @@ def draw_winner(img, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int
         thickness=4,
         lineType=cv2.LINE_AA
     )
-
-    cv2.drawContours(img, contours, -1, (0, 255, 255), 2)

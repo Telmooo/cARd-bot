@@ -163,23 +163,30 @@ def run(params) -> None:
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-            if ar_renderer.is_round_over and not game.is_finished():
-                ar_renderer.is_round_over = False
+            if not game.is_finished():
+                valid_round = round_suit and len(cards_center_label) == 4
 
-                if round_suit:
-                    if len(cards_center_label) != 4:
-                        error_str = "Did not detect exactly four cards!"
-                    else:
-                        # Create card objects from detected cards in the table
-                        cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
-                        # Pick round suit based on first card
-                        sueca_round = SuecaRound(round_suit, cards)
+                if valid_round:
+                    # Create card objects from detected cards in the table
+                    cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
+                    # Pick round suit based on first card
+                    sueca_round = SuecaRound(round_suit, cards)
+
+                    contours = [x[3] for x in cards_center_label]
+                    contours = [c for i, c in enumerate(contours) if i % 2 == sueca_round.winner(game.trump_suit)]
+                    cv2.drawContours(orig_frame, contours, -1, (0, 180, 255), 2)
+ 
+                if ar_renderer.is_round_over:
+                    ar_renderer.is_round_over = False
+
+                    if valid_round:
                         game.evaluate_round(sueca_round)
 
                         error_str = None
                         round_suit = None
-
-            if game.is_finished():
+                    else:
+                        error_str = "Invalid Sueca round!"
+            else:
                 ar_renderer.display_obj = True # Display trophy
                 draw_winner(orig_frame, game, cards_center_label,
                         (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
