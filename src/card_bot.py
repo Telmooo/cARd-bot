@@ -49,20 +49,12 @@ def run(params) -> None:
 
             thresh_frame = binarize(frame, params["config"])
 
-<<<<<<< HEAD
-=======
             marker_corners = ar_renderer.marker_corners
-            # print(marker_corners)
-
             if marker_corners is not None and len(marker_corners) > 0:
                 thresh_frame = cv2.rectangle(thresh_frame, 
                                 np.int32(marker_corners[0][0][0]), np.int32(marker_corners[0][0][2]), 
                                 (0,0,0), thickness=-1 )
 
-            cv2.imshow("RECT", thresh_frame)
-
-            # contours = extract_contours(thresh_frame, params["config"])
->>>>>>> origin/main
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards, card_centers = extract_cards(orig_frame, contours, params["config"])
