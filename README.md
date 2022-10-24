@@ -108,6 +108,7 @@ card_bot.py [-h] --mode MODE CPOINT --config CONFIG [--debug]
 
 Detailed argument description:
 - `-h, --help` - shows help message and usage
+- `-s S, --trump-suit S` - trump suit for the Sueca game (c - Clubs, d - Diamonds, h - Hearts, s - Spades)
 - `--mode MODE CPOINT` - specifies type of acquisition of camera feed and connection point:
   - `--mode usb DEVICENO` - camera feed is acquired directly as a device, and `DEVICENO` specifies the device number in the system
   - `--mode wifi URL` - camera feed is acquired by requesting the URL specified
