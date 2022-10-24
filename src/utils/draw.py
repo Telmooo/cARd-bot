@@ -80,6 +80,10 @@ def draw_winner(img, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int
         text = f"TEAM {sueca_game.winner() + 1} WINS"
         COLOR = (85, 135, 0)
 
+    contours = [x[3] for x in card_center_labels]
+    contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]
+    cv2.drawContours(img, contours, -1, (0, 180, 255), 2)
+
     cv2.putText(
         img=img, 
         text=text,
