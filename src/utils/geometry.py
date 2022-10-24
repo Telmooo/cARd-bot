@@ -78,9 +78,10 @@ def distance_to_line(p1, p2, point):
     x2, y2 = p2
     x, y = point
 
+    denom = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2))
+    denom = 1 if denom == 0 else denom
     return (
-        abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1)) /
-        sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2))
+        abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1)) / denom
     )
 
 def angle_quadrant(angle: float) -> Quadrants:

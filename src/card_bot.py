@@ -12,7 +12,7 @@ import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from sueca import Card, SuecaGame, SuecaRound, Suit, Rank
-from utils.draw import draw_grid, draw_scores, draw_winner
+from utils.draw import *
 from utils.image_processing import *
 
 def run(params) -> None:
@@ -23,17 +23,14 @@ def run(params) -> None:
         mode=params["mode"], cpoint=args["cpoint"]
     )
 
-    ar_renderer = ArRenderer(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
-    # ar_renderer = ArRenderer(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
+    ar_renderer = ArRenderer(camera, params["calib_dir"], "./src/opengl/models/LPC/Low_Poly_Cup.obj", 0.03)
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
         suits_dir=os.path.join(params["config"]["cards.dataset"], "./suits"),
-        load_colour=False
     )
 
-    print(params["trump_suit"])
-    game = SuecaGame(Suit(params["trump_suit"][0]))
+    game = SuecaGame(Suit(params["trump_suit"]))
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
@@ -52,16 +49,11 @@ def run(params) -> None:
             thresh_frame = binarize(frame, params["config"])
 
             marker_corners = ar_renderer.marker_corners
-            # print(marker_corners)
-
             if marker_corners is not None and len(marker_corners) > 0:
                 thresh_frame = cv2.rectangle(thresh_frame, 
                                 np.int32(marker_corners[0][0][0]), np.int32(marker_corners[0][0][2]), 
                                 (0,0,0), thickness=-1 )
 
-            cv2.imshow("RECT", thresh_frame)
-
-            # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards, card_centers = extract_cards(orig_frame, contours, params["config"])
@@ -97,6 +89,8 @@ def run(params) -> None:
 
                 suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
+                    # Only perform template matching with red or black suits,
+                    # depending on the result of the is_red_suit procedure
                     if red ^ suit.is_red():
                         continue
 
@@ -148,11 +142,11 @@ def run(params) -> None:
                     cv2.putText(
                         img=debug_frame,
                         text=f"{label[0][0]} of {label[1][0]}",
-                        org=(filtered_contours[idx][0][0] - np.array([-50, 50])),
+                        org=(filtered_contours[idx][0][0] - np.array([-50, 25])),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
                         color=(85, 135, 0),
-                        thickness=2,
+                        thickness=1,
                         lineType=cv2.LINE_AA
                     )
                     cv2.circle(debug_frame, np.int32(card_centers[idx]), 3, (255, 255, 0), 1)
@@ -163,30 +157,41 @@ def run(params) -> None:
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
                         color=(85, 135, 0),
-                        thickness=2,
+                        thickness=1,
                         lineType=cv2.LINE_AA
                     )
 
                 cv2.imshow("Contours Frame", debug_frame)
 
-            if ar_renderer.is_round_over and not game.is_finished():
-                ar_renderer.is_round_over = False
+            if not game.is_finished():
+                valid_round = round_suit and len(cards_center_label) == 4
 
-                if round_suit:
+                if valid_round:
                     # Create card objects from detected cards in the table
                     cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
                     # Pick round suit based on first card
                     sueca_round = SuecaRound(round_suit, cards)
-                    game.evaluate_round(sueca_round)
 
-                    round_suit = None
+                    contours = [x[3] for x in cards_center_label]
+                    contours = [c for i, c in enumerate(contours) if i % 2 == sueca_round.winner(game.trump_suit)]
+                    cv2.drawContours(orig_frame, contours, -1, (0, 180, 255), 2)
+ 
+                if ar_renderer.is_round_over:
+                    ar_renderer.is_round_over = False
 
-            if game.is_finished():
+                    if valid_round:
+                        game.evaluate_round(sueca_round)
+
+                        error_str = None
+                        round_suit = None
+                    else:
+                        error_str = "Invalid Sueca round!"
+            else:
                 ar_renderer.display_obj = True # Display trophy
                 draw_winner(orig_frame, game, cards_center_label,
                         (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
-            scores_pos = (ar_renderer.cam_w - ar_renderer.cam_w // 5, ar_renderer.cam_h // 10)
+            scores_pos = (25, 25)
             draw_scores(orig_frame, scores_pos, game, round_suit, error_str)
 
             ar_renderer.set_frame(orig_frame)
@@ -209,7 +214,7 @@ def parse_args():
     )
     parser.add_argument(
         "-s", "--trump-suit",
-        required=True, nargs=1, metavar="S", choices=[s.value for s in Suit],
+        required=True, metavar="S", choices=[s.value for s in Suit],
         help="trump suit for the Sueca game (c - Clubs, d - Diamonds, h - Hearts, s - Spades)",
     )
     parser.add_argument(
@@ -221,6 +226,11 @@ def parse_args():
         "--debug",
         action="store_true", default=False,
         help="enable debug mode",
+    )
+    parser.add_argument(
+        "--calib-dir",
+        default="./camera",
+        help="directory containing the camera calibration files",
     )
 
     args = parser.parse_args()

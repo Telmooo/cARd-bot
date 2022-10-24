@@ -89,32 +89,36 @@ def detect_corners_polygonal_approximation(binary_image: Grayscale8UImageType) -
                 end = max(len(contour) - 1, 0)
 
             max_dist = 0
-            i = start
-            
             idx = (start + len(contour) // 2) % len(contour)
+            i = start
             max_iter = len(contour)
-            while i != end:
+
+            while True:
                 dist = distance_to_line(p1, p2, contour[i][0])
                 if dist >= max_dist:
                     idx = i
                     max_dist = dist
-                i = (i + 1) % len(contour)
 
-                max_iter -= 1
-                if (max_iter <= 0):
+                if i == end:
                     break
+                    
+                max_iter -= 1
+                if max_iter <= 0:
+                    break
+
+                i = (i + 1) % len(contour)
 
             return idx
 
         # Find the points C and D that are most distant to line AB
-        c_idx = farthest_along_contour(a, b, end=half - 1)
+        c_idx = farthest_along_contour(a, b, end=half)
         d_idx = farthest_along_contour(a, b, half)
 
         c, d = contour[c_idx], contour[d_idx]
 
         # Find the points E and F that are most distant to line CD
-        e_idx = farthest_along_contour(c[0], d[0], c_idx, d_idx - 1)
-        f_idx = farthest_along_contour(c[0], d[0], d_idx, c_idx - 1)
+        e_idx = farthest_along_contour(c[0], d[0], c_idx, d_idx)
+        f_idx = farthest_along_contour(c[0], d[0], d_idx, c_idx)
 
         e, f = contour[e_idx], contour[f_idx]
 
@@ -172,10 +176,6 @@ def get_quadrilateral_ord_corners(contour):
 
 
 def contour_filter(contour, params, eps=1e-6):
-
-    # print(cv2.contourArea(contour))
-
-    # print(contour)
     contour_area = cv2.contourArea(contour)
     if contour_area > 40000 or contour_area < 3000:
         return False
@@ -334,7 +334,6 @@ def template_matching(
 ):
     w, h = template.shape[::-1]
 
-
     if frame.shape[0] < h or frame.shape[1] < w:
         frame = cv2.resize(frame, (w, h))
         # old_w, old_h = frame.shape[::-1]
@@ -343,7 +342,7 @@ def template_matching(
         # frame = cv2.copyMakeBorder(frame, top=y_half_diff, bottom=y_half_diff, left=x_half_diff, right=x_half_diff,
         #                             borderType=cv2.BORDER_CONSTANT, value=255)
 
-    # template match (suit/rank) with frame
+    # Template match (suit/rank) with frame
     res = cv2.matchTemplate(frame, template, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
@@ -359,19 +358,13 @@ def template_matching(
         top_left[0]:top_left[0] + h
     ]
 
-    # cv2.imshow(f"{temp}FRAME_DEBUG", frame)
-    # cv2.imshow(f"{temp}TEMPLATE_DEBUG", template)
-    # cv2.moveWindow(f"{temp}TEMPLATE_DEBUG", 300, 300 + 300 * (temp != "rank"))
-    # cv2.moveWindow(f"{temp}FRAME_DEBUG", 600, 300 + 300 * (temp != "rank"))
-
     return match, match_val
 
 
 sift  = cv2.SIFT_create()
 
-def feature_point_matching(template, frame ):
-
-    # find the keypoints and descriptors with SIFT
+def feature_point_matching(template, frame):
+    # Find the keypoints and descriptors with SIFT
     kp1, des1 = sift.detectAndCompute(template,None)
     kp2, des2 = sift.detectAndCompute(frame,None)
 
@@ -386,7 +379,7 @@ def feature_point_matching(template, frame ):
     matches = flann.knnMatch(des1,des2,k=2)
     # Need to draw only good matches, so create a mask
     matchesMask = [[0,0] for i in range(len(matches))]
-    # ratio test as per Lowe's paper
+    # Ratio test as per Lowe's paper
     for i,(m,n) in enumerate(matches):
         if m.distance < 0.8*n.distance:
             matchesMask[i]=[1,0]

@@ -4,7 +4,6 @@ import numpy as np
 import cv2
 import requests
 
-
 class AndroidCamera:
     mode: str
     cpoint: Any

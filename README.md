@@ -15,8 +15,10 @@ cd ../../../../
 pip install -r requirements.txt
 ```
 
-**Linux:**
+**Linux (Debian / Ubuntu):**
 ```
+sudo apt-get install freeglut3-dev
+
 pip install -r requirements.txt
 pip install pyopengl
 pip install PyOpenGL-accelerate (optional)
@@ -101,6 +103,11 @@ Detailed argument description:
 - `--save-dir SAVE_DIR` - path to directory to save calibration matrix and saved frames
 - `--debug` - enable debug mode
 
+Hotkey | Action
+-------|-------------
+C      | Capture snapshot
+Enter  | Calculate and save calibration results
+
 ## `card_bot` specification
 ```sh
 card_bot.py [-h] --mode MODE CPOINT --config CONFIG [--debug]
@@ -108,11 +115,17 @@ card_bot.py [-h] --mode MODE CPOINT --config CONFIG [--debug]
 
 Detailed argument description:
 - `-h, --help` - shows help message and usage
+- `-s S, --trump-suit S` - trump suit for the Sueca game (c - Clubs, d - Diamonds, h - Hearts, s - Spades)
 - `--mode MODE CPOINT` - specifies type of acquisition of camera feed and connection point:
   - `--mode usb DEVICENO` - camera feed is acquired directly as a device, and `DEVICENO` specifies the device number in the system
   - `--mode wifi URL` - camera feed is acquired by requesting the URL specified
 - `--config CONFIG` - path to `config.yaml` containing program configuration (see example configuration [below](#example-configyaml))
 - `--debug` - enable debug mode
+
+Hotkey | Action
+-------|-------------
+S      | Detect suit
+Space  | Evaluate round
 
 ### Example `config.yaml`
 Example configuration:
