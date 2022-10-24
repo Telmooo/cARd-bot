@@ -176,7 +176,6 @@ class ArRenderer:
         corners, ids, _rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters = parameters)
 
         self.marker_corners = corners
-
         if not self.display_obj:
             return
 
