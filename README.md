@@ -103,6 +103,11 @@ Detailed argument description:
 - `--save-dir SAVE_DIR` - path to directory to save calibration matrix and saved frames
 - `--debug` - enable debug mode
 
+Hotkey | Action
+-------|-------------
+C      | Capture snapshot
+Enter  | Calculate and save calibration results
+
 ## `card_bot` specification
 ```sh
 card_bot.py [-h] --mode MODE CPOINT --config CONFIG [--debug]
@@ -116,6 +121,11 @@ Detailed argument description:
   - `--mode wifi URL` - camera feed is acquired by requesting the URL specified
 - `--config CONFIG` - path to `config.yaml` containing program configuration (see example configuration [below](#example-configyaml))
 - `--debug` - enable debug mode
+
+Hotkey | Action
+-------|-------------
+S      | Detect suit
+Space  | Evaluate round
 
 ### Example `config.yaml`
 Example configuration:
