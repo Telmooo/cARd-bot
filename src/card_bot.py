@@ -32,7 +32,8 @@ def run(params) -> None:
         load_colour=False
     )
 
-    game = SuecaGame(Suit(params["trump_suit"]))
+    print(params["trump_suit"])
+    game = SuecaGame(Suit(params["trump_suit"][0]))
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
@@ -49,6 +50,16 @@ def run(params) -> None:
             frame = enhance_image(frame, params["config"])
 
             thresh_frame = binarize(frame, params["config"])
+
+            marker_corners = ar_renderer.marker_corners
+            # print(marker_corners)
+
+            if marker_corners is not None and len(marker_corners) > 0:
+                thresh_frame = cv2.rectangle(thresh_frame, 
+                                np.int32(marker_corners[0][0][0]), np.int32(marker_corners[0][0][2]), 
+                                (0,0,0), thickness=-1 )
+
+            cv2.imshow("RECT", thresh_frame)
 
             # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)

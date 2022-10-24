@@ -61,6 +61,8 @@ class ArRenderer:
 
         self.display_obj = False
 
+        self.marker_corners = None
+
 
     def loadModel(self, object_path):
         """[loadModel from object_path]
@@ -167,9 +169,7 @@ class ArRenderer:
             mark_size {float} -- [aruco mark size: unit is meter] (default: {0.07})
         """
 
-        if not self.display_obj:
-            return
-
+       
         # aruco data
         aruco_dict = aruco.Dictionary_get(aruco.DICT_ARUCO_ORIGINAL)      
         parameters =  aruco.DetectorParameters_create()
@@ -177,7 +177,15 @@ class ArRenderer:
         height, width, _channels = image.shape
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         corners, ids, _rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters = parameters)
+
+        print(corners)
+
+        self.marker_corners = corners
         
+
+        if not self.display_obj:
+            return
+
         rvecs, tvecs, model_matrix = None, None, None
         
         if ids is not None and corners is not None:
