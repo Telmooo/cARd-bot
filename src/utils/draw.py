@@ -41,10 +41,10 @@ def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tupl
     
     return grid
 
-def draw_scores(dst_image, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Suit, error_str: str):
+def draw_scores(img, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Suit, error_str: str):
     def draw_text(text: str, pos: Tuple[int, int], color = (85, 135, 0)):
         cv2.putText(
-            img=dst_image,
+            img=img,
             text=text,
             org=pos,
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
@@ -54,23 +54,26 @@ def draw_scores(dst_image, pos: Tuple[int, int], sueca_game: SuecaGame, round_su
             lineType=cv2.LINE_AA
         )
 
+    # Trump suit
+    draw_text(f"Trump Suit: {sueca_game.trump_suit.name}", pos)
+
     # Round number
-    draw_text(f"Round #{sueca_game.rounds_evaluated + 1}", pos)
+    draw_text(f"Round #{sueca_game.rounds_evaluated + 1}", (pos[0], pos[1] + 25))
 
     # Round suit
     if round_suit:
-        draw_text(f"Suit: {round_suit.name}", (pos[0], pos[1] + 25))
+        draw_text(f"Suit: {round_suit.name}", (pos[0], pos[1] + 50))
 
     # Team 1 score
-    draw_text(f"TEAM 1: {sueca_game.team_points[0]}", (pos[0], pos[1] + 50))
+    draw_text(f"TEAM 1: {sueca_game.team_points[0]}", (pos[0], pos[1] + 75))
 
     # Team 2 score
-    draw_text(f"TEAM 2: {sueca_game.team_points[1]}", (pos[0], pos[1] + 75))
+    draw_text(f"TEAM 2: {sueca_game.team_points[1]}", (pos[0], pos[1] + 100))
 
     if error_str:
-        draw_text(error_str, (pos[0], pos[1] + 100), (50, 50, 230))
+        draw_text(error_str, (pos[0], pos[1] + 125), (50, 50, 230))
 
-def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
+def draw_winner(img, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
     contours = [x[3] for x in card_center_labels]
     contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]
 
@@ -81,7 +84,7 @@ def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tup
         COLOR = (85, 135, 0)
 
     cv2.putText(
-        img=dst_image, 
+        img=img, 
         text=text,
         org=pos,
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
@@ -91,4 +94,4 @@ def draw_winner(dst_image, sueca_game : SuecaGame, card_center_labels, pos : Tup
         lineType=cv2.LINE_AA
     )
 
-    cv2.drawContours(dst_image, contours, -1, (0, 255, 255), 2)
+    cv2.drawContours(img, contours, -1, (0, 255, 255), 2)
