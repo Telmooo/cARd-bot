@@ -3,6 +3,25 @@
 
 **cARd-bot** is an augmented reality application that assists playing card games, namely *Sueca*. Application detects cards played on the table, counts the points of each round and keeps track of team points and game state.
 
+## Setup
+
+**Windows:**
+```
+cd src/opengl/wheels/python{python version}
+pip install PyOpenGL-3.1.6-cp310-cp310-win_amd64.whl
+pip install PyOpenGL_accelerate-3.1.6-cp310-cp310-win_amd64.whl
+
+cd ../../../../
+pip install -r requirements.txt
+```
+
+**Linux:**
+```
+pip install -r requirements.txt
+pip install pyopengl
+pip install PyOpenGL-accelerate (optional)
+```
+
 ## Usage
 Application has three main programs:
 - `setup_dataset` - Process a dataset to crop the corner, rank and suit of the cards.
