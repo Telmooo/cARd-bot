@@ -32,11 +32,6 @@ def run(params) -> None:
 
     game = SuecaGame(Suit(params["trump_suit"]))
 
-    # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
-    # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
-    # cv2.imshow("Suit Templates", draw_grid(list(dataset_suits.values())))
-    # print("Suit Templates", [key.name for key in dataset_suits.keys()])
-
     round_suit = None
     error_str = None
 
@@ -193,6 +188,9 @@ def run(params) -> None:
                 break
         except InterruptedError:
             break
+        except:
+            print("Something went wrong.")
+            continue
 
 def parse_args():
     parser = argparse.ArgumentParser()

@@ -236,25 +236,16 @@ def extract_cards(image, contours, params):
     ]).reshape(-1, 1, 2)
 
     cards = []
-    # debug_img = np.zeros_like(image)
-    # COLOURS = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]
     center_pts = []
     for contour in filtered_contours:
         src_pts, center_pt = get_quadrilateral_ord_corners(contour)
 
-        # for idx, corner in enumerate(src_pts):
-        #     cv2.circle(debug_img, np.int32(corner[0]), 5, COLOURS[idx], 2)
-
-        # M = cv2.perspectiveTransform(src_pts, target_pts)
         M, _mask = cv2.findHomography(src_pts, target_pts, cv2.RANSAC, 5.0)
         card = cv2.warpPerspective(image, M, (params["cards.width"], params["cards.height"]))
 
-        # card = cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
-        # card = enhance_image(card, params)
         cards.append(card)
         center_pts.append(center_pt)
 
-    # cv2.imshow("Corner Order", debug_img)
     return cards, center_pts
 
 def extract_card_corners(cards, params):
@@ -295,12 +286,6 @@ def extract_card_rank_suit(cards, params):
         # Get the second and third largest contours (largest contour is generally the image border)
         bound_rect = bound_rect[-3:-1]
 
-        # corner = cv2.cvtColor(corner, cv2.COLOR_GRAY2BGR)
-        # for i in range(len(bound_rect)):
-        #     cv2.rectangle(corner, (int(bound_rect[i][0]), int(bound_rect[i][1])), \
-        #     (int(bound_rect[i][0]+bound_rect[i][2]), int(bound_rect[i][1]+bound_rect[i][3])), (255,0,0), 2)
-        # cv2.imshow("Contour Corner", corner)
-
         if len(bound_rect) >= 2:
             cards_rank_suit.append((
                 corner[
@@ -336,11 +321,6 @@ def template_matching(
 
     if frame.shape[0] < h or frame.shape[1] < w:
         frame = cv2.resize(frame, (w, h))
-        # old_w, old_h = frame.shape[::-1]
-        # x_half_diff = (w - old_w) // 2 + 1 if w > old_w else 0
-        # y_half_diff = (h - old_h) // 2 + 1 if h > old_h else 0
-        # frame = cv2.copyMakeBorder(frame, top=y_half_diff, bottom=y_half_diff, left=x_half_diff, right=x_half_diff,
-        #                             borderType=cv2.BORDER_CONSTANT, value=255)
 
     # Template match (suit/rank) with frame
     res = cv2.matchTemplate(frame, template, method)
