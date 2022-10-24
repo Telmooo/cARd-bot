@@ -178,11 +178,8 @@ class ArRenderer:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         corners, ids, _rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters = parameters)
 
-        print(corners)
-
         self.marker_corners = corners
         
-
         if not self.display_obj:
             return
 
