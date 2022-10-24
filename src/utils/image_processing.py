@@ -91,6 +91,7 @@ def detect_corners_polygonal_approximation(binary_image: Grayscale8UImageType) -
             max_dist = 0
             idx = (start + len(contour) // 2) % len(contour)
             i = start
+            max_iter = len(contour)
 
             while True:
                 dist = distance_to_line(p1, p2, contour[i][0])
@@ -99,6 +100,10 @@ def detect_corners_polygonal_approximation(binary_image: Grayscale8UImageType) -
                     max_dist = dist
 
                 if i == end:
+                    break
+                    
+                max_iter -= 1
+                if max_iter <= 0:
                     break
 
                 i = (i + 1) % len(contour)
