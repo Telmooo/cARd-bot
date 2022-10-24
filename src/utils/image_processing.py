@@ -88,28 +88,32 @@ def detect_corners_polygonal_approximation(binary_image: Grayscale8UImageType) -
             if end is None:
                 end = len(contour) - 1
 
+            idx = 0
             max_dist = 0
             i = start
 
-            while i != end:
+            while True:
                 dist = distance_to_line(p1, p2, contour[i][0])
                 if dist >= max_dist:
                     idx = i
                     max_dist = dist
+
+                if i == end:
+                    break
 
                 i = (i + 1) % len(contour)
 
             return idx
 
         # Find the points C and D that are most distant to line AB
-        c_idx = farthest_along_contour(a, b, end=half - 1)
+        c_idx = farthest_along_contour(a, b, end=half)
         d_idx = farthest_along_contour(a, b, half)
 
         c, d = contour[c_idx], contour[d_idx]
 
         # Find the points E and F that are most distant to line CD
-        e_idx = farthest_along_contour(c[0], d[0], c_idx, d_idx - 1)
-        f_idx = farthest_along_contour(c[0], d[0], d_idx, c_idx - 1)
+        e_idx = farthest_along_contour(c[0], d[0], c_idx, d_idx)
+        f_idx = farthest_along_contour(c[0], d[0], d_idx, c_idx)
 
         e, f = contour[e_idx], contour[f_idx]
 
