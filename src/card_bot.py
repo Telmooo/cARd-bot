@@ -30,8 +30,7 @@ def run(params) -> None:
         suits_dir=os.path.join(params["config"]["cards.dataset"], "./suits"),
     )
 
-    print(params["trump_suit"])
-    game = SuecaGame(Suit(params["trump_suit"][0]))
+    game = SuecaGame(Suit(params["trump_suit"]))
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
