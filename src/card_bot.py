@@ -32,7 +32,7 @@ def run(params) -> None:
         load_colour=False
     )
 
-    game = SuecaGame()
+    game = SuecaGame(Suit(params["trump_suit"]))
 
     # cv2.imshow("Rank Templates", draw_grid(list(dataset_ranks.values())))
     # print("Rank Templates", [key.name for key in dataset_ranks.keys()])
@@ -195,6 +195,11 @@ def parse_args():
             "- MODE=usb - connection point is device number",
             "- MODE=wifi - connection point is the URL to access frame"
         ]),
+    )
+    parser.add_argument(
+        "-s", "--trump-suit",
+        required=True, nargs=1, metavar="S", choices=[s.value for s in Suit],
+        help="trump suit for the Sueca game (c - Clubs, d - Diamonds, h - Hearts, s - Spades)",
     )
     parser.add_argument(
         "--config",

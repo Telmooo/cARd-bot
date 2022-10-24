@@ -60,8 +60,8 @@ class SuecaRound:
 class SuecaGame:
     NUM_ROUNDS = 10
 
-    def __init__(self, trump_suit: Suit = None) -> None:
-        self.trump_suit = random.choice(list(Suit))
+    def __init__(self, trump_suit: Suit) -> None:
+        self.trump_suit = trump_suit
         self.team_points = [0, 0]
         self.rounds_evaluated = 0
 

@@ -2,6 +2,10 @@
 Adapted from: https://github.com/BryceQing/OPENCV_AR
 """
 
+import os
+# Hide prompt when importing pygame
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
+
 import pygame
 from OpenGL.GL import *
 
