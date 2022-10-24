@@ -12,7 +12,7 @@ import config
 from config import parse_config
 from data.load_dataset import Rank, Suit, load_split_rank_suit_dataset
 from sueca import Card, SuecaGame, SuecaRound, Suit, Rank
-from utils.draw import draw_grid, draw_scores, draw_winner
+from utils.draw import *
 from utils.image_processing import *
 
 def run(params) -> None:
@@ -24,12 +24,10 @@ def run(params) -> None:
     )
 
     ar_renderer = ArRenderer(camera, './src/opengl/models/LPC/Low_Poly_Cup.obj', 0.03)
-    # ar_renderer = ArRenderer(camera, './src/opengl/models/plastic_cup/Plastic_Cup.obj', 0.02)
 
     dataset_ranks, dataset_suits = load_split_rank_suit_dataset(
         ranks_dir=os.path.join(params["config"]["cards.dataset"], "./ranks"),
         suits_dir=os.path.join(params["config"]["cards.dataset"], "./suits"),
-        load_colour=False
     )
 
     game = SuecaGame(Suit(params["trump_suit"]))
@@ -50,7 +48,6 @@ def run(params) -> None:
 
             thresh_frame = binarize(frame, params["config"])
 
-            # contours = extract_contours(thresh_frame, params["config"])
             contours = detect_corners_polygonal_approximation(thresh_frame)
 
             cards, card_centers = extract_cards(orig_frame, contours, params["config"])
@@ -86,6 +83,8 @@ def run(params) -> None:
 
                 suit_match: Dict[Suit, Tuple[float, np.ndarray]] = {}
                 for suit, template_suit in dataset_suits.items():
+                    # Only perform template matching with red or black suits,
+                    # depending on the result of the is_red_suit procedure
                     if red ^ suit.is_red():
                         continue
 

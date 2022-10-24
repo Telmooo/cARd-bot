@@ -4,7 +4,8 @@ Adapted from: https://github.com/BryceQing/OPENCV_AR
 
 import numpy as np
 import cv2
-def extrinsic2ModelView(RVEC, TVEC, R_vector = True):
+
+def extrinsic_to_model_view(RVEC, TVEC, R_vector = True):
     """[Get modelview matrix from RVEC and TVEC]
 
     Arguments:
@@ -34,7 +35,7 @@ def extrinsic2ModelView(RVEC, TVEC, R_vector = True):
     return M.T.flatten()
 
 
-def intrinsic2Project(MTX, width, height, near_plane=0.01, far_plane=100.0):
+def intrinsic_to_project(MTX, width, height, near_plane=0.01, far_plane=100.0):
     """[Get ]
 
     Arguments:

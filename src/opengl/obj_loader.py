@@ -41,7 +41,7 @@ def MTL(dir, filename):
     return contents
 
 # TODO load more format models
-class OBJ:
+class Obj:
     def __init__(self, filename, swapyz=False):
         
         self.dir = filename[: filename.rfind('/') + 1]   
