@@ -6,6 +6,23 @@ import cv2
 from data.load_dataset import Suit
 from sueca import SuecaGame
 
+def draw_text_with_bg(
+    img,
+    text: str,
+    pos: Tuple[int, int] = (0, 0),
+    font_scale: float = 0.5,
+    text_color: Tuple[int, int, int] = (110, 190, 0),
+    bg_color: Tuple[int, int, int] = (0, 0, 0),
+):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    thickness = 1
+
+    x, y = pos
+    text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
+    tw, th = text_size
+    cv2.rectangle(img, pos, (x + tw + 6, y + th + 6), bg_color, -1)
+    cv2.putText(img, text, (x + 3, y + th), font, font_scale, text_color, thickness, lineType=cv2.LINE_AA)
+
 def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tuple[int, int]] = None):
     if not images:
         return np.array([])
@@ -42,7 +59,7 @@ def draw_grid(images: Union[np.ndarray, List[np.ndarray]], resize: Optional[Tupl
     return grid
 
 def draw_scores(img, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Suit, error_str: str):
-    def draw_text(text: str, pos: Tuple[int, int], color = (85, 135, 0)):
+    def draw_text(text: str, pos: Tuple[int, int], color = (100, 150, 0)):
         cv2.putText(
             img=img,
             text=text,
@@ -73,12 +90,12 @@ def draw_scores(img, pos: Tuple[int, int], sueca_game: SuecaGame, round_suit: Su
     if error_str:
         draw_text(error_str, (pos[0], pos[1] + 125), (50, 50, 230))
 
-def draw_winner(img, sueca_game : SuecaGame, card_center_labels, pos : Tuple[int, int]):
+def draw_winner(img, sueca_game: SuecaGame, card_center_labels, pos: Tuple[int, int]):
     text = "TIE"
     COLOR = (0, 0, 255)
     if sueca_game.winner() is not None:
         text = f"TEAM {sueca_game.winner() + 1} WINS"
-        COLOR = (85, 135, 0)
+        COLOR = (100, 150, 0)
 
     contours = [x[3] for x in card_center_labels]
     contours = [c for i, c in enumerate(contours) if i % 2 == sueca_game.winner()]

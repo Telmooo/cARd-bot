@@ -48,6 +48,9 @@ def run(params) -> None:
 
             thresh_frame = binarize(frame, params["config"])
 
+            if config.DEBUG_MODE:
+                cv2.imshow("Binarized", thresh_frame)
+
             marker_corners = ar_renderer.marker_corners
             if marker_corners is not None and len(marker_corners) > 0:
                 thresh_frame = cv2.rectangle(thresh_frame, 
@@ -60,8 +63,8 @@ def run(params) -> None:
 
             cards_rank_suit = extract_card_rank_suit(cards, params["config"])
 
-            cards_labels = []
-            cards_center_label = []
+            card_labels = []
+            card_center_labels = []
             for idx, (card_rank, card_suit) in enumerate(cards_rank_suit):
                 red = is_red_suit(card_suit)
 
@@ -114,65 +117,55 @@ def run(params) -> None:
                         else:
                             error_str = "Not enough confidence to determine suit!"
 
-                cards_labels.append((
+                card_labels.append((
                     (max_rank_match.name,) + rank_match[max_rank_match],
                     (max_suit_match.name,) + suit_match[max_suit_match]
                 ))
 
-                cards_center_label.append((card_centers[idx], max_rank_match, max_suit_match))
+                card_center_labels.append((card_centers[idx], max_rank_match, max_suit_match))
 
             filtered_contours = list(filter(lambda x: contour_filter(x, params["config"]), contours))
 
-            for idx, tup in enumerate(cards_center_label):
-                cards_center_label[idx] = tup + (filtered_contours[idx],)
+            for idx, tup in enumerate(card_center_labels):
+                card_center_labels[idx] = tup + (filtered_contours[idx],)
 
             # Sort along x-axis
-            cards_center_label = sorted(cards_center_label, key=lambda x : x[0][0])
+            card_center_labels = sorted(card_center_labels, key=lambda x : x[0][0])
 
-            if len(cards_center_label) >= 4:
+            if len(card_center_labels) >= 4:
                 # Cards are sorted along x axis -> swap last two (bottom/top middle and rightmost)
                 # This way we get a list with cards from alternating teams
-                cards_center_label[-1], cards_center_label[-2] = cards_center_label[-2], cards_center_label[-1]
+                card_center_labels[-1], card_center_labels[-2] = card_center_labels[-2], card_center_labels[-1]
 
             if config.DEBUG_MODE:
                 debug_frame = orig_frame.copy()
                 cv2.drawContours(debug_frame, filtered_contours, -1, (0, 0, 255), 2)
 
-                for idx, label in enumerate(cards_labels):
-                    cv2.putText(
-                        img=debug_frame,
-                        text=f"{label[0][0]} of {label[1][0]}",
-                        org=(filtered_contours[idx][0][0] - np.array([-50, 25])),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(85, 135, 0),
-                        thickness=1,
-                        lineType=cv2.LINE_AA
+                for idx, label in enumerate(card_labels):
+                    draw_text_with_bg(
+                        debug_frame,
+                        f"{label[0][0]} of {label[1][0]}",
+                        np.int32(card_centers[idx]) - np.array([75, 20]),
+                    )
+                    draw_text_with_bg(
+                        debug_frame,
+                        f"CONFIDENCE={label[0][1]:.3f} | {label[1][1]:.3f}",
+                        np.int32(card_centers[idx]) - np.array([75, 40]),
                     )
                     cv2.circle(debug_frame, np.int32(card_centers[idx]), 3, (255, 255, 0), 1)
-                    cv2.putText(
-                        img=debug_frame,
-                        text=f"CONFIDENCE={label[0][1]:.3f} | {label[1][1]:.3f}",
-                        org=(filtered_contours[idx][0][0] - np.array([-50, 0])),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(85, 135, 0),
-                        thickness=1,
-                        lineType=cv2.LINE_AA
-                    )
 
                 cv2.imshow("Contours Frame", debug_frame)
 
             if not game.is_finished():
-                valid_round = round_suit and len(cards_center_label) == 4
+                valid_round = round_suit and len(card_center_labels) == 4
 
                 if valid_round:
                     # Create card objects from detected cards in the table
-                    cards = [Card(rank, suit) for (_, rank, suit, _) in cards_center_label]
+                    cards = [Card(rank, suit) for (_, rank, suit, _) in card_center_labels]
                     # Pick round suit based on first card
                     sueca_round = SuecaRound(round_suit, cards)
 
-                    contours = [x[3] for x in cards_center_label]
+                    contours = [x[3] for x in card_center_labels]
                     contours = [c for i, c in enumerate(contours) if i % 2 == sueca_round.winner(game.trump_suit)]
                     cv2.drawContours(orig_frame, contours, -1, (0, 180, 255), 2)
  
@@ -188,7 +181,7 @@ def run(params) -> None:
                         error_str = "Invalid Sueca round!"
             else:
                 ar_renderer.display_obj = True # Display trophy
-                draw_winner(orig_frame, game, cards_center_label,
+                draw_winner(orig_frame, game, card_center_labels,
                         (ar_renderer.cam_w // 2 - 90, ar_renderer.cam_h - ar_renderer.cam_h // 5))
 
             scores_pos = (25, 25)
