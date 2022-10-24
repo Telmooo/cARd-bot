@@ -86,10 +86,10 @@ def detect_corners_polygonal_approximation(binary_image: Grayscale8UImageType) -
 
         def farthest_along_contour(p1, p2, start=0, end=None):
             if end is None:
-                end = len(contour) - 1
+                end = max(len(contour) - 1, 0)
 
-            idx = 0
             max_dist = 0
+            idx = (start + len(contour) // 2) % len(contour)
             i = start
 
             while True:
@@ -171,9 +171,15 @@ def get_quadrilateral_ord_corners(contour):
 
 
 def contour_filter(contour, params, eps=1e-6):
-    # if len(contour) != 4:
-    #     return False
-    if contour.shape[0] > 4 and contour.shape[1] != 1:
+
+    # print(cv2.contourArea(contour))
+
+    # print(contour)
+    contour_area = cv2.contourArea(contour)
+    if contour_area > 40000 or contour_area < 3000:
+        return False
+
+    if contour.shape[0] != 4 and contour.shape[1] != 1:
         return False
 
     # corners = get_quadrilateral_ord_corners(contour)
@@ -215,7 +221,7 @@ def contour_filter(contour, params, eps=1e-6):
 
     #     break
 
-    return True
+    return cv2.isContourConvex(contour)
 
 def extract_cards(image, contours, params):
     # Filter contours
